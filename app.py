@@ -247,6 +247,15 @@ def product_etag(p):
 # Product API
 # ---------------------------------------------------------------------------
 ALLOWED_SORT = {"id", "name", "price"}
+MAX_ID = 2_147_483_647  # the Integer primary key is 32-bit; anything beyond can't exist
+
+
+def fetch_owned_or_none(s, product_id):
+    """Fetch a product by id, treating out-of-range ids as 'not found' instead of
+    letting the DB driver overflow."""
+    if product_id < 1 or product_id > MAX_ID:
+        return None
+    return s.get(Product, product_id)
 
 
 @app.route("/api/products", methods=["GET"])
@@ -264,7 +273,10 @@ def list_products():
     if exact_id is not None:
         if not exact_id.isdigit():
             return jsonify({"error": "id must be a number"}), 400
-        rows = s.scalars(select(Product).where(Product.id == int(exact_id))).all()
+        value = int(exact_id)
+        rows = [] if value > MAX_ID else s.scalars(
+            select(Product).where(Product.id == value)
+        ).all()
         resp = jsonify([p.to_dict() for p in rows])
         resp.headers["X-Total-Count"] = str(len(rows))
         return resp
@@ -298,8 +310,8 @@ def list_products():
         return jsonify({"error": "limit and offset must be integers"}), 400
     if not (1 <= limit <= 100):
         return jsonify({"error": "limit must be between 1 and 100"}), 400
-    if offset < 0:
-        return jsonify({"error": "offset must be >= 0"}), 400
+    if not (0 <= offset <= MAX_ID):
+        return jsonify({"error": f"offset must be between 0 and {MAX_ID}"}), 400
 
     base = select(Product)
     count_q = select(func.count()).select_from(Product)
@@ -319,7 +331,7 @@ def list_products():
 @app.route("/api/products/<int:product_id>", methods=["GET"])
 def get_product(product_id):
     s = get_session()
-    p = s.get(Product, product_id)
+    p = fetch_owned_or_none(s, product_id)
     if p is None:
         return jsonify({"error": f"Product {product_id} not found"}), 404
 
@@ -381,7 +393,7 @@ def _require_edit_token(product):
 @app.route("/api/products/<int:product_id>", methods=["PUT", "PATCH"])
 def update_product(product_id):
     s = get_session()
-    p = s.get(Product, product_id)
+    p = fetch_owned_or_none(s, product_id)
     if p is None:
         return jsonify({"error": f"Product {product_id} not found"}), 404
 
@@ -408,7 +420,7 @@ def update_product(product_id):
 @app.route("/api/products/<int:product_id>", methods=["DELETE"])
 def delete_product(product_id):
     s = get_session()
-    p = s.get(Product, product_id)
+    p = fetch_owned_or_none(s, product_id)
     if p is None:
         return jsonify({"error": f"Product {product_id} not found"}), 404
 
