@@ -263,7 +263,8 @@ a { color: inherit; text-decoration: none; }
 .console .err { color: #ff8a8a; }
 .console .muted { color: #8a8a8a; }
 .pg-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+.pg-examples-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 18px 0 8px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
 .chip { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 999px; padding: 7px 14px;
   font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; }
 .chip:hover { border-color: var(--accent); color: var(--accent); }
