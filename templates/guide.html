@@ -23,17 +23,17 @@
     <section class="hero" style="padding-bottom:8px;">
       <div class="hero-tag">[ GUIDE ]</div>
       <h1>What ToolShop does</h1>
-      <p class="lead">ToolShop is a small full-stack demo store. It pairs a clean catalog UI
-        with a fully public REST API, so the same products you browse here can also be created,
-        searched, updated and deleted programmatically. It makes a realistic target for API
-        testing, automation practice and demos.</p>
+      <p class="lead" style="max-width:760px;">ToolShop is a small full-stack demo store. It pairs
+        a clean catalog UI with a fully public REST API, so the same products you browse here can
+        also be created, searched, updated and deleted programmatically. It makes a realistic
+        target for API testing, automation practice and demos.</p>
     </section>
 
     <div class="prose">
 
       <div class="cards-3">
         <div class="mini">
-          <div class="k">🛍️</div>
+          <div class="k">🔍</div>
           <h4>Browse &amp; search</h4>
           <p>A public catalog you can search by partial name or look up by exact ID.</p>
         </div>
@@ -65,10 +65,11 @@
           <line x1="480" y1="86"  x2="480" y2="150" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
           <line x1="480" y1="306" x2="480" y2="350" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
           <line x1="480" y1="406" x2="480" y2="450" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
-          <line x1="236" y1="242" x2="296" y2="242" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
-          <line x1="724" y1="242" x2="664" y2="242" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
-          <text x="266" y="232" text-anchor="middle" fill="#9a9a9a" font-size="11">loads spec · calls API</text>
-          <text x="694" y="232" text-anchor="middle" fill="#9a9a9a" font-size="11">daily cleanup</text>
+          <line x1="236" y1="242" x2="296" y2="242" stroke="#ba7517" stroke-width="2" marker-end="url(#arr)"></line>
+          <line x1="724" y1="242" x2="664" y2="242" stroke="#e24b4a" stroke-width="2" marker-end="url(#arr)"></line>
+          <!-- connector captions placed above the side boxes so nothing is hidden -->
+          <text x="146" y="190" text-anchor="middle" fill="#854f0b" font-size="11" font-weight="700">loads spec · calls API</text>
+          <text x="814" y="190" text-anchor="middle" fill="#a32d2d" font-size="11" font-weight="700">triggers daily cleanup</text>
 
           <!-- animated request-flow dots (hidden behind node boxes) -->
           <circle r="4.5" fill="#f2691e"><animateMotion dur="2.2s" repeatCount="indefinite" path="M480,90 L480,520"></animateMotion></circle>
@@ -77,59 +78,59 @@
 
           <!-- Clients -->
           <g class="nodeg" data-key="clients">
-            <rect class="box" x="380" y="26" width="200" height="60" rx="14" fill="#1c1c1c"></rect>
-            <text x="480" y="52" text-anchor="middle" fill="#fff" font-size="16" font-weight="800">Clients</text>
-            <text x="480" y="72" text-anchor="middle" fill="#bdbdbd" font-size="11">Browser · curl · Postman</text>
+            <rect class="box" x="380" y="26" width="200" height="60" rx="14" fill="#efeee9" stroke="#888780" stroke-width="1.5"></rect>
+            <text x="480" y="52" text-anchor="middle" fill="#2c2c2a" font-size="16" font-weight="800">Clients</text>
+            <text x="480" y="72" text-anchor="middle" fill="#5f5e5a" font-size="11">Browser · curl · Postman</text>
           </g>
 
           <!-- Flask container + inner components -->
           <rect x="296" y="150" width="368" height="156" rx="16" fill="#fbfbfb" stroke="#e2e2e2"></rect>
           <text x="316" y="176" fill="#1c1c1c" font-size="13" font-weight="800" letter-spacing="1">FLASK APPLICATION</text>
           <g class="nodeg" data-key="pages">
-            <rect class="box" x="312" y="196" width="108" height="94" rx="12" fill="#f1f1f1"></rect>
-            <text x="366" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">Web pages</text>
-            <text x="366" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/ · /product</text>
-            <text x="366" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/guide · /docs</text>
+            <rect class="box" x="312" y="196" width="108" height="94" rx="12" fill="#e6f1fb" stroke="#378add" stroke-width="1.5"></rect>
+            <text x="366" y="236" text-anchor="middle" fill="#0c447c" font-size="14" font-weight="800">Web pages</text>
+            <text x="366" y="256" text-anchor="middle" fill="#185fa5" font-size="10.5">/ · /product</text>
+            <text x="366" y="270" text-anchor="middle" fill="#185fa5" font-size="10.5">/guide · /docs</text>
           </g>
           <g class="nodeg" data-key="api">
-            <rect class="box" x="430" y="196" width="104" height="94" rx="12" fill="#f1f1f1"></rect>
-            <text x="482" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">REST API</text>
-            <text x="482" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/api/products</text>
-            <text x="482" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">CRUD · search</text>
+            <rect class="box" x="430" y="196" width="104" height="94" rx="12" fill="#fde9da" stroke="#f2691e" stroke-width="1.5"></rect>
+            <text x="482" y="236" text-anchor="middle" fill="#993c1d" font-size="14" font-weight="800">REST API</text>
+            <text x="482" y="256" text-anchor="middle" fill="#c4621f" font-size="10.5">/api/products</text>
+            <text x="482" y="270" text-anchor="middle" fill="#c4621f" font-size="10.5">CRUD · search</text>
           </g>
           <g class="nodeg" data-key="openapi">
-            <rect class="box" x="544" y="196" width="108" height="94" rx="12" fill="#f1f1f1"></rect>
-            <text x="598" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">OpenAPI</text>
-            <text x="598" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">openapi.json</text>
-            <text x="598" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">3.0 spec</text>
+            <rect class="box" x="544" y="196" width="108" height="94" rx="12" fill="#eaf3de" stroke="#639922" stroke-width="1.5"></rect>
+            <text x="598" y="236" text-anchor="middle" fill="#27500a" font-size="14" font-weight="800">OpenAPI</text>
+            <text x="598" y="256" text-anchor="middle" fill="#3b6d11" font-size="10.5">openapi.json</text>
+            <text x="598" y="270" text-anchor="middle" fill="#3b6d11" font-size="10.5">3.0 spec</text>
           </g>
 
           <!-- SQLAlchemy -->
           <g class="nodeg" data-key="orm">
-            <rect class="box" x="360" y="350" width="240" height="56" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
-            <text x="480" y="384" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">SQLAlchemy ORM</text>
+            <rect class="box" x="360" y="350" width="240" height="56" rx="14" fill="#eeedfe" stroke="#534ab7" stroke-width="1.5"></rect>
+            <text x="480" y="384" text-anchor="middle" fill="#26215c" font-size="15" font-weight="800">SQLAlchemy ORM</text>
           </g>
 
           <!-- Database -->
           <g class="nodeg" data-key="db">
-            <rect class="box" x="360" y="450" width="240" height="72" rx="14" fill="#1c1c1c"></rect>
-            <text x="480" y="484" text-anchor="middle" fill="#fff" font-size="16" font-weight="800">Database</text>
-            <text x="480" y="505" text-anchor="middle" fill="#bdbdbd" font-size="11">PostgreSQL / SQLite</text>
+            <rect class="box" x="360" y="450" width="240" height="72" rx="14" fill="#e1f5ee" stroke="#1d9e75" stroke-width="1.5"></rect>
+            <text x="480" y="484" text-anchor="middle" fill="#0f6e56" font-size="16" font-weight="800">Database</text>
+            <text x="480" y="505" text-anchor="middle" fill="#127a5f" font-size="11">PostgreSQL / SQLite</text>
           </g>
 
           <!-- Swagger UI -->
           <g class="nodeg" data-key="swagger">
-            <rect class="box" x="56" y="200" width="180" height="84" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
-            <text x="146" y="236" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">Swagger UI</text>
-            <text x="146" y="258" text-anchor="middle" fill="#7c7c7c" font-size="11">/docs · Try it out</text>
+            <rect class="box" x="56" y="200" width="180" height="84" rx="14" fill="#faeeda" stroke="#ba7517" stroke-width="1.5"></rect>
+            <text x="146" y="236" text-anchor="middle" fill="#854f0b" font-size="15" font-weight="800">Swagger UI</text>
+            <text x="146" y="258" text-anchor="middle" fill="#854f0b" font-size="11">/docs · Try it out</text>
           </g>
 
           <!-- Cleanup job -->
           <g class="nodeg" data-key="cron">
-            <rect class="box" x="724" y="200" width="180" height="84" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
-            <text x="814" y="232" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">Cleanup job</text>
-            <text x="814" y="252" text-anchor="middle" fill="#7c7c7c" font-size="11">daily 00:00 (IST)</text>
-            <text x="814" y="268" text-anchor="middle" fill="#7c7c7c" font-size="11">removes API items</text>
+            <rect class="box" x="724" y="200" width="180" height="84" rx="14" fill="#fcebeb" stroke="#e24b4a" stroke-width="1.5"></rect>
+            <text x="814" y="232" text-anchor="middle" fill="#a32d2d" font-size="15" font-weight="800">Cleanup job</text>
+            <text x="814" y="252" text-anchor="middle" fill="#c14444" font-size="11">daily 00:00 (IST)</text>
+            <text x="814" y="268" text-anchor="middle" fill="#c14444" font-size="11">removes API items</text>
           </g>
         </svg>
 
