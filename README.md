@@ -1,6 +1,6 @@
 # ToolShop
 
-A small but complete full-stack demo store — a public web catalog backed by a fully documented REST API. Inspired by [practicesoftwaretesting.com](https://practicesoftwaretesting.com), it's built to be a clean, realistic target for API testing, automation practice, and front-end/back-end demos.
+A small but complete full-stack demo store: a public web catalog backed by a fully documented REST API. It is built to be a clean, realistic target for API testing, automation practice, and front-end / back-end demos.
 
 **Live demo:** https://kerens-software-testing-practice.onrender.com
 **API docs (Swagger UI):** https://kerens-software-testing-practice.onrender.com/docs
@@ -22,6 +22,7 @@ A small but complete full-stack demo store — a public web catalog backed by a 
 - [API reference](#api-reference)
 - [Ownership model (edit tokens)](#ownership-model-edit-tokens)
 - [Data model](#data-model)
+- [Data retention](#data-retention)
 - [Project structure](#project-structure)
 - [Running locally](#running-locally)
 - [Database migrations](#database-migrations)
@@ -38,16 +39,17 @@ ToolShop serves two audiences from one codebase:
 - **Humans** get a responsive catalog at `/` where they can browse tools, search by name or ID, and open any product's detail page.
 - **Machines** get a public JSON REST API at `/api` with full create / read / update / delete support and interactive OpenAPI documentation at `/docs`.
 
-There are no user accounts. Reading and searching are open to everyone; modifying a product is protected by a per-item secret (see [Ownership model](#ownership-model-edit-tokens)). All write operations are performed through the API only — the website is intentionally read-only.
+There are no user accounts. Reading and searching are open to everyone; modifying a product is protected by a per-item secret (see [Ownership model](#ownership-model-edit-tokens)). All write operations are performed through the API only, so the website itself is read-only.
 
 ## Features
 
 - **Public REST API** with full CRUD over JSON and permissive CORS.
 - **Search** by partial, case-insensitive name (`?search=`) or exact ID (`?id=`).
-- **Interactive API docs** — a complete OpenAPI 3.0 spec rendered with Swagger UI, including "Try it out".
-- **Token-based ownership** — no logins; creating a product returns a one-time secret required to edit or delete it. Only a hash is stored.
-- **Database-agnostic** — runs on PostgreSQL in production and SQLite locally, selected automatically via `DATABASE_URL`.
-- **Self-healing schema** — detects and repairs schema drift on boot, with a concurrency-safe, multi-worker initialization lock.
+- **Interactive API docs**: a complete OpenAPI 3.0 spec rendered with Swagger UI, including "Try it out".
+- **Token-based ownership**: no logins; creating a product returns a one-time secret required to edit or delete it. Only a hash is stored.
+- **Database-agnostic**: runs on PostgreSQL in production and SQLite locally, selected automatically via `DATABASE_URL`.
+- **Self-healing schema**: detects and repairs schema drift on boot, with a concurrency-safe, multi-worker initialization lock.
+- **Scheduled cleanup**: a daily job removes API-created products to keep the database small.
 - **A dedicated guide page** (`/guide`) explaining the project and every endpoint.
 - **One-command deploy** to Render via a Blueprint (`render.yaml`) that also provisions Postgres.
 
@@ -67,11 +69,11 @@ There are no user accounts. Reading and searching are open to everyone; modifyin
 ## Architecture
 
 ```
-Browser ──► Flask ──► SQLAlchemy ──► PostgreSQL / SQLite
-   │           │
-   │           ├── HTML pages:  /  /product/<id>  /guide  /docs
-   │           └── JSON API:    /api/products ...  +  /api/openapi.json
-   └── Swagger UI (loads the OpenAPI spec and calls the same API)
+Browser  ->  Flask  ->  SQLAlchemy  ->  PostgreSQL / SQLite
+   |          |
+   |          |-- HTML pages:  /  /product/<id>  /guide  /docs
+   |          \-- JSON API:    /api/products ...  +  /api/openapi.json
+   \-- Swagger UI (loads the OpenAPI spec and calls the same API)
 ```
 
 A single Flask app serves both the rendered pages and the JSON API. The OpenAPI document is generated in Python and exposed at `/api/openapi.json`; the `/docs` page is a thin Swagger UI shell that consumes it, so the docs can never drift from the routes.
@@ -82,23 +84,23 @@ Base URL: `/api`. All responses are JSON. Reads and creates are open; updates an
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/products` | — | List all products |
-| `GET` | `/api/products?search=plier` | — | Search by partial, case-insensitive name |
-| `GET` | `/api/products?id=3` | — | Exact ID lookup (returns a list of 0–1 items) |
-| `GET` | `/api/products/{id}` | — | Get a single product by ID |
-| `POST` | `/api/products` | — | Create a product (returns a one-time `edit_token`) |
+| `GET` | `/api/products` | none | List all products |
+| `GET` | `/api/products?search=plier` | none | Search by partial, case-insensitive name |
+| `GET` | `/api/products?id=3` | none | Exact ID lookup (returns a list of 0 to 1 items) |
+| `GET` | `/api/products/{id}` | none | Get a single product by ID |
+| `POST` | `/api/products` | none | Create a product (returns a one-time `edit_token`) |
 | `PUT` / `PATCH` | `/api/products/{id}` | `X-Edit-Token` | Update a product |
 | `DELETE` | `/api/products/{id}` | `X-Edit-Token` | Delete a product |
-| `GET` | `/api/health` | — | Health check (reports the active DB engine) |
+| `GET` | `/api/health` | none | Health check (reports the active DB engine) |
 
 ### Examples
 
 ```bash
-# Create — keep the edit_token from the response
+# Create, then keep the edit_token from the response
 curl -X POST https://kerens-software-testing-practice.onrender.com/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"Rubber Mallet","price":9.9,"category":"Hammer"}'
-# -> { "id": 13, ..., "edit_token": "AbC123..." }
+# returns: { "id": 13, ..., "edit_token": "AbC123..." }
 
 # Update (token required)
 curl -X PUT https://kerens-software-testing-practice.onrender.com/api/products/13 \
@@ -128,13 +130,13 @@ curl "https://kerens-software-testing-practice.onrender.com/api/products?id=3"
 
 ## Ownership model (edit tokens)
 
-The API is public, so anyone can create products — but a product should only be editable by whoever created it, without forcing accounts and passwords. ToolShop solves this with **per-item edit tokens**:
+The API is public, so anyone can create products, but a product should only be editable by whoever created it without forcing accounts and passwords. ToolShop solves this with **per-item edit tokens**:
 
 1. `POST /api/products` generates a random secret and returns it once as `edit_token`. Only its SHA-256 hash is persisted.
-2. `PUT` / `DELETE` require that token in the `X-Edit-Token` header; the server compares hashes.
+2. `PUT` and `DELETE` require that token in the `X-Edit-Token` header; the server compares hashes.
 3. Seeded baseline products have no token and are therefore read-only.
 
-This keeps the API open and scriptable while still scoping mutations to their creator — a pragmatic alternative to full authentication for a public demo.
+This keeps the API open and scriptable while still scoping mutations to their creator, a pragmatic alternative to full authentication for a public demo.
 
 ## Data model
 
@@ -164,13 +166,22 @@ JSON representation:
 }
 ```
 
+## Data retention
+
+Products created through the API are temporary. A scheduled job (`scripts/cleanup.py`) runs once a day at midnight (Israel time) and deletes every product that was created via the API, keeping only the built-in baseline catalog. This keeps the database small. On Render the job is configured as a Cron Job in `render.yaml`; the schedule is in UTC (`0 21 * * *` is midnight in Israel during summer time). You can also run it manually:
+
+```bash
+python scripts/cleanup.py
+```
+
 ## Project structure
 
 ```
 toolshop/
-├── app.py                 # Flask app: API, pages, OpenAPI spec, DB init
+├── app.py                 # Flask app: API, pages, OpenAPI spec, DB init, cleanup
 ├── scripts/
-│   └── migrate.py         # Schema bootstrap, drift check, and reset
+│   ├── migrate.py         # Schema bootstrap, drift check, and reset
+│   └── cleanup.py         # Daily removal of API-created products
 ├── templates/
 │   ├── index.html         # Catalog + search
 │   ├── product.html       # Product detail
@@ -181,13 +192,13 @@ toolshop/
 ├── requirements.txt
 ├── Procfile               # Process definition (Gunicorn)
 ├── Dockerfile             # Container build
-├── render.yaml            # Render Blueprint (web service + Postgres)
+├── render.yaml            # Render Blueprint (web service + Postgres + cron)
 └── README.md
 ```
 
 ## Running locally
 
-Requires Python 3.10+.
+Requires Python 3.10 or newer.
 
 ```bash
 git clone <your-repo-url>
@@ -220,13 +231,13 @@ The app also self-heals on boot: if the live table is missing columns the model 
 
 ## Deployment (Render + Postgres)
 
-The included `render.yaml` provisions a free PostgreSQL instance and a web service, wiring `DATABASE_URL` between them automatically.
+The included `render.yaml` provisions a free PostgreSQL instance, a web service, and a daily cleanup cron job, wiring `DATABASE_URL` between them automatically.
 
 1. Push this repository to GitHub.
-2. In Render, choose **New → Blueprint** and connect the repo. Render reads `render.yaml`, creates the database and the service, and injects `DATABASE_URL`.
-3. Deploy. You'll get a public URL such as `https://<app>.onrender.com`.
+2. In Render, choose **New, then Blueprint**, and connect the repo. Render reads `render.yaml`, creates the database, the service, and the cron job, and injects `DATABASE_URL`.
+3. Deploy. You get a public URL such as `https://<app>.onrender.com`.
 
-If you deploy as a plain Web Service instead of a Blueprint, add a `DATABASE_URL` environment variable pointing to your Postgres instance — otherwise the app falls back to an ephemeral SQLite file that resets on every deploy. The active engine is visible at `/api/health`.
+If you deploy as a plain Web Service instead of a Blueprint, add a `DATABASE_URL` environment variable pointing to your Postgres instance; otherwise the app falls back to an ephemeral SQLite file that resets on every deploy. The active engine is visible at `/api/health`.
 
 ```bash
 # Build:  pip install -r requirements.txt
@@ -237,10 +248,10 @@ A `Dockerfile` is also provided for any container host.
 
 ## Design notes
 
-- **Docs that can't lie** — Swagger UI consumes the same OpenAPI document the app publishes, so the reference always matches the routes.
-- **No-login ownership** — edit tokens scope writes to their creator without storing credentials, fitting a public, scriptable API.
-- **Operational resilience** — automatic schema-drift repair plus a multi-worker init lock keep deploys from crash-looping on schema changes.
-- **Portability** — one codebase, two databases (`DATABASE_URL`), no front-end build step.
+- **Docs that stay in sync**: Swagger UI consumes the same OpenAPI document the app publishes, so the reference always matches the routes.
+- **No-login ownership**: edit tokens scope writes to their creator without storing credentials, fitting a public, scriptable API.
+- **Operational resilience**: automatic schema-drift repair plus a multi-worker init lock keep deploys from crash-looping on schema changes.
+- **Portability**: one codebase, two databases (`DATABASE_URL`), no front-end build step.
 
 ## Author
 

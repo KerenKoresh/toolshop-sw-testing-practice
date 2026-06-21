@@ -2,7 +2,7 @@
 """Database migration / bootstrap for ToolShop.
 
 Creates the schema (and seeds the baseline catalog if empty) on whatever database
-DATABASE_URL points to — Postgres in production, SQLite locally.
+DATABASE_URL points to: Postgres in production, SQLite locally.
 
 Usage:
     python scripts/migrate.py            # create tables + seed if empty (idempotent)
@@ -46,7 +46,7 @@ def check():
     if extra:
         print("!! EXTRA columns (from an older schema):", sorted(extra))
     if ok:
-        print("Schema OK — matches the model.")
+        print("Schema OK. Matches the model.")
     return ok
 
 

@@ -24,7 +24,7 @@
     <!-- Hero -->
     <section class="hero">
       <div class="hero-stats">
-        <div class="big"><span class="accent" id="statCount">—</span></div>
+        <div class="big"><span class="accent" id="statCount">··</span></div>
         <p>tools in the catalog, all available through our public REST API.</p>
       </div>
 
@@ -60,7 +60,7 @@
     </section>
 
     <footer class="foot">
-      <span>&copy; 2026 Keren Koresh — ToolShop</span>
+      <span>&copy; 2026 Keren Koresh · ToolShop</span>
       <span>Reads &amp; search are open · writes via <a href="/docs">API</a></span>
     </footer>
 
@@ -128,7 +128,7 @@
 
     async function loadStat() {
       try { const d = await (await fetch('/api/products')).json();
-        if (Array.isArray(d)) statCount.textContent = d.length; } catch(e){ statCount.textContent='—'; }
+        if (Array.isArray(d)) statCount.textContent = d.length; } catch(e){ statCount.textContent='··'; }
     }
 
     form.addEventListener('submit', e => { e.preventDefault(); loadProducts(input.value); });

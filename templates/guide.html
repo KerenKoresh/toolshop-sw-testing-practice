@@ -23,10 +23,10 @@
     <section class="hero" style="padding-bottom:8px;">
       <div class="hero-tag">[ GUIDE ]</div>
       <h1>What ToolShop does</h1>
-      <p class="lead">ToolShop is a small full-stack demo store inspired by
-        practicesoftwaretesting.com. It pairs a clean catalog UI with a fully public REST
-        API, so the same products you browse here can also be created, searched, updated and
-        deleted programmatically — ideal for API testing, automation practice and demos.</p>
+      <p class="lead">ToolShop is a small full-stack demo store. It pairs a clean catalog UI
+        with a fully public REST API, so the same products you browse here can also be created,
+        searched, updated and deleted programmatically. It makes a realistic target for API
+        testing, automation practice and demos.</p>
     </section>
 
     <div class="prose">
@@ -52,7 +52,7 @@
       <h2>How ownership works</h2>
       <p>There is no login. Reading and searching are open to everyone. When you
         <strong>create</strong> a product through the API, the response includes a one-time
-        <code>edit_token</code> — a random secret. Only a SHA-256 hash of it is stored on the
+        <code>edit_token</code>, a random secret. Only a SHA-256 hash of it is stored on the
         server. To later <strong>update</strong> or <strong>delete</strong> that product you must
         send the same token in the <code>X-Edit-Token</code> request header. Products in the
         seeded baseline catalog have no token and are therefore read-only.</p>
@@ -94,7 +94,7 @@
         <p class="desc">Creates a product. <code>name</code> is required; <code>description</code>,
           <code>price</code>, <code>category</code> and <code>in_stock</code> are optional. The
           response includes the created product <strong>and a one-time <code>edit_token</code></strong>
-          — save it, it is the only way to modify the product later.</p>
+          (save it, it is the only way to modify the product later).</p>
         <pre>curl -X POST https://kerens-software-testing-practice.onrender.com/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"Rubber Mallet","price":9.9,"category":"Hammer"}'</pre>
@@ -150,17 +150,23 @@
   "editable": false
 }</pre>
 
+      <h2>Data retention</h2>
+      <p>To keep the database small, products created through the API are temporary. A
+        scheduled job runs <strong>once a day at midnight (Israel time)</strong> and removes
+        every product created via the API, leaving only the built-in baseline catalog. If you
+        create products for testing, expect them to be cleared at the next midnight.</p>
+
       <h2>Pages on this site</h2>
       <ul>
-        <li><code>/</code> — catalog with search; click a product to open its details in a new tab.</li>
-        <li><code>/product/&lt;id&gt;</code> — a single product's detail page.</li>
-        <li><code>/guide</code> — this page.</li>
-        <li><code>/docs</code> — interactive Swagger UI for the API.</li>
+        <li><code>/</code>: catalog with search; click a product to open its details in a new tab.</li>
+        <li><code>/product/&lt;id&gt;</code>: a single product's detail page.</li>
+        <li><code>/guide</code>: this page.</li>
+        <li><code>/docs</code>: interactive Swagger UI for the API.</li>
       </ul>
     </div>
 
     <footer class="foot">
-      <span>&copy; 2026 Keren Koresh — ToolShop</span>
+      <span>&copy; 2026 Keren Koresh · ToolShop</span>
       <span>Reads &amp; search are open · writes via <a href="/docs">API</a></span>
     </footer>
 

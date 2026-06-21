@@ -1,4 +1,4 @@
-"""ToolShop - a small store API + website (inspired by practicesoftwaretesting.com).
+"""ToolShop - a small store API + website.
 
 Backend: Flask + SQLAlchemy. Works with Postgres (set DATABASE_URL) or SQLite (default).
 Serves a JSON REST API and a small web UI.
@@ -138,6 +138,23 @@ def _repair_schema_drift():
 
 def hash_token(token):
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def delete_user_products():
+    """Delete every product created through the API, keeping only the baseline
+    catalog (rows with no edit token). Returns the number of rows removed.
+
+    Used by the daily cleanup job to keep the database small.
+    """
+    with SessionLocal() as s:
+        rows = s.scalars(
+            select(Product).where(Product.edit_token_hash.is_not(None))
+        ).all()
+        removed = len(rows)
+        for row in rows:
+            s.delete(row)
+        s.commit()
+    return removed
 
 
 # ---------------------------------------------------------------------------
@@ -371,8 +388,8 @@ OPENAPI = {
             "post": {
                 "tags": ["Products"],
                 "summary": "Create a product",
-                "description": "Returns the product plus a one-time `edit_token`. Save it — "
-                "it is required (and only shown once) to edit or delete this product.",
+                "description": "Returns the product plus a one-time `edit_token`. Save it, "
+                "as it is required (and only shown once) to edit or delete this product.",
                 "requestBody": {"required": True,
                                 "content": {"application/json": {"schema": PRODUCT_INPUT}}},
                 "responses": {

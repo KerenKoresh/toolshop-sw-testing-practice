@@ -17,3 +17,20 @@ services:
         fromDatabase:
           name: toolshop-db
           property: connectionString
+
+  # Daily cleanup: removes API-created products, keeps the baseline catalog.
+  # Schedule is in UTC. "0 21 * * *" = 00:00 in Israel (IDT, UTC+3).
+  - type: cron
+    name: toolshop-cleanup
+    runtime: python
+    plan: free
+    schedule: "0 21 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/cleanup.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: toolshop-db
+          property: connectionString
