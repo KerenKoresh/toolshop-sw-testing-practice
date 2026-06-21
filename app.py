@@ -14,9 +14,11 @@ import uuid
 import secrets
 import hashlib
 import contextlib
+import logging
 
 from typing import Optional
 
+from sqlalchemy.exc import OperationalError as SAOperationalError
 from flask import Flask, request, jsonify, g, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -124,8 +126,13 @@ def _init_lock():
 
 def init_db():
     with _init_lock():
-        Base.metadata.create_all(engine, checkfirst=True)
-        _repair_schema_drift()
+        try:
+            Base.metadata.create_all(engine, checkfirst=True)
+            _repair_schema_drift()
+        except SAOperationalError as exc:
+            # Another container won the race and already created/recreated the schema.
+            # Log and continue — the table exists and is usable.
+            logging.warning("[init_db] schema setup skipped (race with another instance): %s", exc)
         with SessionLocal() as s:
             count = s.scalar(select(func.count()).select_from(Product))
             if count == 0:
@@ -154,8 +161,8 @@ def _repair_schema_drift():
     if missing:
         print(f"[init_db] schema drift detected (missing {sorted(missing)}); "
               f"recreating 'products' table")
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+        Base.metadata.drop_all(engine, checkfirst=True)
+        Base.metadata.create_all(engine, checkfirst=True)
 
 
 def hash_token(token):
