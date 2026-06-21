@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in · ToolShop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="bar">
+    <h1><a href="/">🛠️ ToolShop</a></h1>
+  </header>
+
+  <div class="container">
+    <div class="auth-card panel">
+      <div class="tabs">
+        <button id="tabLogin" class="tab active">Log in</button>
+        <button id="tabRegister" class="tab">Register</button>
+      </div>
+
+      <div id="message" class="message hidden"></div>
+
+      <form id="authForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="current-password">
+          <small class="muted" id="pwHint"></small>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%">Log in</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
+  <script>
+    // If already logged in, go straight to the shop.
+    if (getToken()) window.location = '/';
+
+    let mode = 'login'; // or 'register'
+    const form = document.getElementById('authForm');
+    const messageBox = document.getElementById('message');
+    const submitBtn = document.getElementById('submitBtn');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegister = document.getElementById('tabRegister');
+    const pwHint = document.getElementById('pwHint');
+    const pwInput = document.getElementById('password');
+
+    function setMode(next) {
+      mode = next;
+      const isLogin = mode === 'login';
+      tabLogin.classList.toggle('active', isLogin);
+      tabRegister.classList.toggle('active', !isLogin);
+      submitBtn.textContent = isLogin ? 'Log in' : 'Create account';
+      pwHint.textContent = isLogin ? '' : 'At least 6 characters.';
+      pwInput.autocomplete = isLogin ? 'current-password' : 'new-password';
+      hideMessage();
+    }
+
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = 'message ' + type;
+    }
+    function hideMessage() { messageBox.className = 'message hidden'; }
+
+    tabLogin.addEventListener('click', () => setMode('login'));
+    tabRegister.addEventListener('click', () => setMode('register'));
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = pwInput.value;
+      const url = mode === 'login' ? '/api/login' : '/api/register';
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showMessage(data.error || 'Something went wrong.', 'error');
+          return;
+        }
+        setAuth(data.token, data.user);
+        window.location = '/';
+      } catch (err) {
+        showMessage('Network error. Please try again.', 'error');
+      }
+    });
+
+    setMode('login');
+  </script>
+</body>
+</html>

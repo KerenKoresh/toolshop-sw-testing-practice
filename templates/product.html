@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header>
+  <header class="bar">
     <h1><a href="/">🛠️ ToolShop</a></h1>
+    <span class="userbar" id="userbar"></span>
   </header>
 
   <div class="container">
@@ -16,7 +17,11 @@
     <div id="content"></div>
   </div>
 
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
   <script>
+    if (!requireAuth()) throw new Error('redirecting');
+    renderUserBar(document.getElementById('userbar'));
+
     const productId = {{ product_id }};
     const content = document.getElementById('content');
 
@@ -28,7 +33,7 @@
 
     async function loadProduct() {
       try {
-        const res = await fetch('/api/products/' + productId);
+        const res = await authFetch('/api/products/' + productId);
         const data = await res.json();
 
         if (!res.ok) {

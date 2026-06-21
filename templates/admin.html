@@ -12,6 +12,7 @@
     <nav class="menu">
       <a class="admin-link" href="/docs">API Docs</a>
       <a class="admin-link" href="/">← Back to shop</a>
+      <span class="userbar" id="userbar"></span>
     </nav>
   </header>
 
@@ -62,7 +63,11 @@
     </div>
   </div>
 
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
   <script>
+    if (!requireAuth()) throw new Error('redirecting');
+    renderUserBar(document.getElementById('userbar'));
+
     const form = document.getElementById('productForm');
     const tbody = document.getElementById('tbody');
     const toast = document.getElementById('toast');
@@ -92,7 +97,7 @@
     }
 
     async function loadTable() {
-      const res = await fetch('/api/products');
+      const res = await authFetch('/api/products');
       const data = await res.json();
       tbody.innerHTML = '';
       data.forEach(p => {
@@ -146,7 +151,7 @@
       const url = id ? '/api/products/' + id : '/api/products';
       const method = id ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -169,7 +174,7 @@
       const delId = e.target.getAttribute('data-del');
 
       if (editId) {
-        const res = await fetch('/api/products/' + editId);
+        const res = await authFetch('/api/products/' + editId);
         const data = await res.json();
         if (res.ok) fillForm(data);
         else showToast(data.error || 'Not found', 'error');
@@ -177,7 +182,7 @@
 
       if (delId) {
         if (!confirm('Delete product #' + delId + '?')) return;
-        const res = await fetch('/api/products/' + delId, { method: 'DELETE' });
+        const res = await authFetch('/api/products/' + delId, { method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Error deleting', 'error'); return; }
         showToast('Product deleted.', 'info');

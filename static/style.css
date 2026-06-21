@@ -56,6 +56,17 @@ table.admin-table th, table.admin-table td {
 table.admin-table th { color: var(--muted); font-weight: 600; }
 .toast { margin-bottom: 16px; }
 
+/* Auth */
+.auth-card { max-width: 380px; margin: 40px auto; }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab {
+  flex: 1; padding: 10px; border: none; background: #eef2f7; color: var(--muted);
+  border-radius: 7px; cursor: pointer; font-size: 15px;
+}
+.tab.active { background: var(--primary); color: #fff; }
+.field small { display: block; margin-top: 4px; font-size: 12px; }
+.userbar { display: flex; align-items: center; }
+
 .container {
   max-width: 1000px;
   margin: 0 auto;

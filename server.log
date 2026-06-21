@@ -62,3 +62,9 @@ On macOS, try searching for and disabling 'AirPlay Receiver' in System Settings.
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 127-806-279
+ * Detected change in '/Users/keren.koresh/Library/Application Support/Claude/local-agent-mode-sessions/45f9831a-4304-40e9-bb45-1a17bb2df9c2/bfa688bb-e51f-4d8d-b835-c97370335506/local_19e407fb-fd78-4451-b4a5-e5a1eff7ac1a/outputs/toolshop/app.py', reloading
+ * Restarting with stat
+Traceback (most recent call last):
+  File "/Users/keren.koresh/Library/Application Support/Claude/local-agent-mode-sessions/45f9831a-4304-40e9-bb45-1a17bb2df9c2/bfa688bb-e51f-4d8d-b835-c97370335506/local_19e407fb-fd78-4451-b4a5-e5a1eff7ac1a/outputs/toolshop/app.py", line 11, in <module>
+    import jwt
+ModuleNotFoundError: No module named 'jwt'

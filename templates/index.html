@@ -12,6 +12,7 @@
     <nav class="menu">
       <a class="admin-link" href="/docs">API Docs</a>
       <a class="admin-link" href="/admin">Manage products</a>
+      <span class="userbar" id="userbar"></span>
     </nav>
   </header>
 
@@ -25,7 +26,11 @@
     <div id="grid" class="grid"></div>
   </div>
 
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
   <script>
+    if (!requireAuth()) throw new Error('redirecting');
+    renderUserBar(document.getElementById('userbar'));
+
     const grid = document.getElementById('grid');
     const messageBox = document.getElementById('message');
     const form = document.getElementById('searchForm');
@@ -74,7 +79,7 @@
       }
 
       try {
-        const res = await fetch(url);
+        const res = await authFetch(url);
         const data = await res.json();
 
         if (!res.ok) {

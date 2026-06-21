@@ -5,15 +5,41 @@
 ## מה יש כאן
 
 - **Backend**: Flask + SQLite (CRUD מלא + חיפוש)
+- **אימות JWT**: הרשמה / כניסה; כל משתמש רואה ומנהל **רק את המוצרים שלו** (פרטי לחלוטין)
 - **Frontend**: דף בית עם תיבת חיפוש; לחיצה על מוצר פותחת טאב חדש עם הפרטים; הודעת שגיאה כשאין תוצאה
 - **דף ניהול** (`/admin`): טופס להוספה / עריכה / מחיקה של מוצרים דרך הממשק
-- **דף תיעוד Swagger** (`/docs`): תיעוד אינטראקטיבי של כל ה-endpoints עם "Try it out"
+- **דף תיעוד Swagger** (`/docs`): תיעוד אינטראקטיבי + כפתור Authorize ל-JWT
 - **CORS פתוח** — ה-API נגיש מכל מקור
+
+## אימות (JWT)
+
+נרשמים או מתחברים, מקבלים `token`, ושולחים אותו בכל בקשה למוצרים:
+`Authorization: Bearer <token>`
+
+| Method | Endpoint | תיאור |
+|--------|----------|-------|
+| POST | `/api/register` | יצירת משתמש חדש (מחזיר token) |
+| POST | `/api/login` | כניסה (מחזיר token) |
+| GET | `/api/me` | פרטי המשתמש המחובר |
+
+```bash
+# הרשמה
+curl -X POST http://localhost:5000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","password":"secret1"}'
+
+# שימוש ב-token שהתקבל
+TOKEN=...   # מתוך התשובה
+curl http://localhost:5000/api/products -H "Authorization: Bearer $TOKEN"
+```
+
+> ⚠️ בפריסה חובה להגדיר `SECRET_KEY` כ-env var קבוע (חתימת ה-JWT). אחרת כל deploy מנתק את כולם.
 
 ## עמודי האתר
 
 | עמוד | כתובת |
 |------|-------|
+| כניסה / הרשמה | `/login` |
 | חנות + חיפוש | `/` |
 | פרטי מוצר | `/product/<id>` |
 | ניהול מוצרים | `/admin` |
@@ -28,9 +54,9 @@ python app.py
 # פתחי http://localhost:5000
 ```
 
-## API
+## API (מוצרים)
 
-בסיס: `/api`
+בסיס: `/api` — **כל ה-endpoints של המוצרים דורשים `Authorization: Bearer <token>`** ופועלים רק על המוצרים של המשתמש המחובר.
 
 | Method | Endpoint | תיאור |
 |--------|----------|-------|
