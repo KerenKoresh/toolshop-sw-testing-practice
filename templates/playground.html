@@ -33,14 +33,20 @@
 
     <div class="pg-grid">
       <div class="pg-pane">
-        <h3>Your code</h3>
-        <div class="editor-wrap"><textarea id="code"></textarea></div>
+        <h3>Examples — click to load</h3>
         <div class="chips">
           <span class="chip" data-ex="list">List products</span>
-          <span class="chip" data-ex="create">Create + edit (token)</span>
+          <span class="chip" data-ex="getone">Get one (by id)</span>
           <span class="chip" data-ex="search">Search</span>
-          <span class="chip" data-ex="negative">Negative test (401/403)</span>
+          <span class="chip" data-ex="create">Create + edit (token)</span>
+          <span class="chip" data-ex="delete">Delete (token)</span>
+          <span class="chip" data-ex="crud">Full CRUD flow</span>
+          <span class="chip" data-ex="negative">Negative tests</span>
+          <span class="chip" data-ex="health">Health check</span>
         </div>
+
+        <h3 style="margin-top:18px;">Your code</h3>
+        <div class="editor-wrap"><textarea id="code"></textarea></div>
         <div class="pg-bar">
           <button class="btn btn-accent" id="runBtn" disabled>Run</button>
           <button class="btn btn-ghost" id="clearBtn">Clear output</button>
@@ -77,7 +83,30 @@ print("GET /api/products ->", r.status_code)
 products = r.json()
 print("count:", len(products))
 for p in products[:5]:
-    print(f"  #{p['id']:<3} {p['name']:<22} \${p['price']}")
+    print(f"  #{p['id']:<3} {p['name']:<22} price {p['price']}")
+`,
+      getone:
+`import requests
+
+# Get a single product by id
+r = requests.get(f"{BASE}/api/products/3")
+print("GET /api/products/3 ->", r.status_code)
+print(r.json())
+
+# A missing id returns 404
+r = requests.get(f"{BASE}/api/products/999999")
+print("missing id ->", r.status_code, r.json())
+`,
+      search:
+`import requests
+
+# Partial, case-insensitive name search
+r = requests.get(f"{BASE}/api/products", params={"search": "plier"})
+print("search 'plier':", [p["name"] for p in r.json()])
+
+# Exact id lookup (returns a list of 0 or 1 items)
+r = requests.get(f"{BASE}/api/products", params={"id": 3})
+print("id=3:", r.json())
 `,
       create:
 `import requests
@@ -99,36 +128,112 @@ print("PUT ->", r.status_code, "| new price:", r.json()["price"])
 assert r.status_code == 200
 print("All good")
 `,
-      search:
+      delete:
 `import requests
 
-# Partial, case-insensitive name search
-r = requests.get(f"{BASE}/api/products", params={"search": "plier"})
-print("search 'plier':", [p["name"] for p in r.json()])
+# Create a product so we hold its edit_token
+data = requests.post(f"{BASE}/api/products", json={"name": "Disposable", "price": 3}).json()
+pid, token = data["id"], data["edit_token"]
+print("created id:", pid)
 
-# Exact id lookup (returns a list of 0 or 1 items)
-r = requests.get(f"{BASE}/api/products", params={"id": 3})
-print("id=3:", r.json())
+# Delete it with the token
+r = requests.delete(f"{BASE}/api/products/{pid}", headers={"X-Edit-Token": token})
+print("DELETE ->", r.status_code, r.json())
+
+# It is gone now
+r = requests.get(f"{BASE}/api/products/{pid}")
+print("GET after delete ->", r.status_code, "(expected 404)")
+assert r.status_code == 404
+print("Deleted")
+`,
+      crud:
+`import requests
+
+# A full create -> read -> update -> delete cycle with assertions
+data = requests.post(f"{BASE}/api/products",
+                     json={"name": "CRUD Tool", "price": 10, "category": "Drill"}).json()
+pid, token = data["id"], data["edit_token"]
+auth = {"X-Edit-Token": token}
+print("CREATE ->", pid)
+
+# READ
+r = requests.get(f"{BASE}/api/products/{pid}")
+assert r.status_code == 200 and r.json()["name"] == "CRUD Tool"
+print("READ   -> ok")
+
+# UPDATE
+r = requests.put(f"{BASE}/api/products/{pid}", json={"price": 12.5}, headers=auth)
+assert r.json()["price"] == 12.5
+print("UPDATE -> price", r.json()["price"])
+
+# DELETE
+r = requests.delete(f"{BASE}/api/products/{pid}", headers=auth)
+assert r.status_code == 200
+print("DELETE -> ok")
+
+# CONFIRM gone
+assert requests.get(f"{BASE}/api/products/{pid}").status_code == 404
+print("Full CRUD passed")
 `,
       negative:
 `import requests
 
-# Create something we own
+# Create a product we own (used by the auth tests)
 data = requests.post(f"{BASE}/api/products", json={"name": "Locked Tool", "price": 5}).json()
-pid = data["id"]
+pid, token = data["id"], data["edit_token"]
 
-# Update WITHOUT a token -> expect 401
+# --- Validation (400) ---
+r = requests.post(f"{BASE}/api/products", json={"price": 9})
+print("create no name   ->", r.status_code, "(expected 400)")
+assert r.status_code == 400
+
+r = requests.get(f"{BASE}/api/products", params={"id": "abc"})
+print("id=abc           ->", r.status_code, "(expected 400)")
+assert r.status_code == 400
+
+# --- Not found (404) ---
+r = requests.get(f"{BASE}/api/products/999999")
+print("get missing      ->", r.status_code, "(expected 404)")
+assert r.status_code == 404
+
+r = requests.delete(f"{BASE}/api/products/999999", headers={"X-Edit-Token": token})
+print("delete missing   ->", r.status_code, "(expected 404)")
+assert r.status_code == 404
+
+# --- Update auth (401 / 403) ---
 r = requests.put(f"{BASE}/api/products/{pid}", json={"price": 1})
-print("no token   ->", r.status_code, "(expected 401)")
+print("update no token  ->", r.status_code, "(expected 401)")
 assert r.status_code == 401
 
-# Update with WRONG token -> expect 403
 r = requests.put(f"{BASE}/api/products/{pid}", json={"price": 1},
-                 headers={"X-Edit-Token": "definitely-wrong"})
-print("wrong token->", r.status_code, "(expected 403)")
+                 headers={"X-Edit-Token": "wrong"})
+print("update wrong tok ->", r.status_code, "(expected 403)")
 assert r.status_code == 403
 
-print("Negative tests passed")
+# --- Delete auth (401 / 403) ---
+r = requests.delete(f"{BASE}/api/products/{pid}")
+print("delete no token  ->", r.status_code, "(expected 401)")
+assert r.status_code == 401
+
+r = requests.delete(f"{BASE}/api/products/{pid}", headers={"X-Edit-Token": "wrong"})
+print("delete wrong tok ->", r.status_code, "(expected 403)")
+assert r.status_code == 403
+
+# --- Baseline products are read-only (no token exists for them) ---
+baseline = next(p for p in requests.get(f"{BASE}/api/products").json() if not p["editable"])
+r = requests.put(f"{BASE}/api/products/{baseline['id']}", json={"price": 1},
+                 headers={"X-Edit-Token": "anything"})
+print("edit baseline    ->", r.status_code, "(expected 403)")
+assert r.status_code == 403
+
+print("All negative tests passed")
+`,
+      health:
+`import requests
+
+r = requests.get(f"{BASE}/api/health")
+print("GET /api/health ->", r.status_code)
+print(r.json())
 `,
     };
 
@@ -141,7 +246,7 @@ print("Negative tests passed")
         mode: 'python', theme: 'material-darker', lineNumbers: true,
         indentUnit: 4, tabSize: 4,
       });
-      editor.setSize(null, 360);
+      editor.setSize(null, 540);
     } catch (e) { /* textarea remains */ }
 
     function getCode() { return editor ? editor.getValue() : ta.value; }
