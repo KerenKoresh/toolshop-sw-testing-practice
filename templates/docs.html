@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>API Docs · ToolShop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css">
+</head>
+<body>
+  <div class="shell">
+
+    <header class="topbar">
+      <div class="brand"><span class="logo"></span> ToolShop</div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/#catalog">Catalog</a>
+        <a href="/docs" class="active">API Docs</a>
+      </nav>
+      <a class="btn-dark" href="/">Back to shop</a>
+    </header>
+
+    <section class="hero" style="padding-bottom:0;">
+      <div class="hero-tag">[ REFERENCE ]</div>
+      <h1>The ToolShop API</h1>
+      <p class="lead">Interactive documentation. Click an endpoint, then <strong>Try it out</strong>
+         to send a real request. Reads are open; writes need the product's edit token.</p>
+    </section>
+
+    <div class="docs-wrap"><div id="swagger-ui"></div></div>
+
+    <footer class="foot">
+      <span>&copy; ToolShop</span>
+      <span>OpenAPI 3.0</span>
+    </footer>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/api/openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        tryItOutEnabled: true,
+        defaultModelsExpandDepth: -1,
+      });
+    };
+  </script>
+</body>
+</html>

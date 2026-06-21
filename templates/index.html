@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ToolShop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body>
+  <div class="shell">
+
+    <!-- Nav -->
+    <header class="topbar">
+      <div class="brand"><span class="logo"></span> ToolShop</div>
+      <nav class="nav">
+        <a href="/" class="active">Home</a>
+        <a href="#catalog">Catalog</a>
+        <a href="/docs">API Docs</a>
+      </nav>
+      <a class="btn-dark" href="/docs">Public API</a>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-stats">
+        <div class="big"><span class="accent" id="statCount">—</span></div>
+        <p>tools in the catalog, all available through our public REST API.</p>
+      </div>
+
+      <div class="hero-tag">[ CATALOG ]</div>
+      <h1>Tools that build better things</h1>
+      <p class="lead">Browse the ToolShop catalog. Everything you see here can also be created,
+         updated and searched programmatically through our open API.</p>
+
+      <div class="cta-row">
+        <a class="btn btn-accent" href="#catalog">Browse catalog</a>
+        <a class="btn btn-ghost" href="/docs">View API docs</a>
+      </div>
+
+      <div class="wordmark">TOOLSHOP</div>
+    </section>
+
+    <!-- Search -->
+    <section class="search">
+      <form id="searchForm" onsubmit="return false;">
+        <input type="text" id="searchInput" placeholder="Search by name, or type an exact ID number..." />
+        <button type="submit" class="btn btn-accent" id="searchBtn">Search</button>
+      </form>
+    </section>
+
+    <!-- Catalog -->
+    <section id="catalog">
+      <div class="section-head">
+        <h2 id="resultsTitle">Products</h2>
+        <span class="count" id="resultsCount"></span>
+      </div>
+      <div id="message" class="msg" style="display:none;"></div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <footer class="foot">
+      <span>&copy; ToolShop — a demo store with a public API.</span>
+      <span>Reads &amp; search are open · writes via <a href="/docs">API</a></span>
+    </footer>
+
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const messageBox = document.getElementById('message');
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('searchInput');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const resultsCount = document.getElementById('resultsCount');
+    const statCount = document.getElementById('statCount');
+
+    const EMOJI = { pliers:'🔧', cutters:'✂️', hammer:'🔨', saw:'🪚', wrench:'🔧',
+                    drill:'🪛', screwdriver:'🪛', measures:'📏' };
+    function emojiFor(cat) { return EMOJI[(cat||'').toLowerCase()] || '🛠️'; }
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+    function showMessage(t, err){ messageBox.textContent=t; messageBox.className='msg'+(err?' error':''); messageBox.style.display='block'; }
+    function hideMessage(){ messageBox.style.display='none'; }
+
+    function renderProducts(products) {
+      grid.innerHTML = '';
+      products.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumb">${emojiFor(p.category)}</div>
+          <div class="body">
+            <h3>${escapeHtml(p.name)}</h3>
+            <div class="cat">${escapeHtml(p.category || 'Uncategorized')}</div>
+            <div class="row">
+              <span class="price">$${Number(p.price).toFixed(2)}</span>
+              <span class="pill ${p.in_stock ? 'in' : 'out'}">${p.in_stock ? 'In stock' : 'Out of stock'}</span>
+            </div>
+          </div>`;
+        card.addEventListener('click', () => window.open('/product/' + p.id, '_blank'));
+        grid.appendChild(card);
+      });
+    }
+
+    async function loadProducts(query) {
+      hideMessage(); grid.innerHTML = '';
+      let url = '/api/products';
+      if (query) {
+        if (/^\d+$/.test(query.trim())) url += '?id=' + encodeURIComponent(query.trim());
+        else url += '?search=' + encodeURIComponent(query.trim());
+        resultsTitle.textContent = 'Results for "' + query + '"';
+      } else {
+        resultsTitle.textContent = 'Products';
+      }
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) { showMessage(data.error || 'Something went wrong.', true); resultsCount.textContent=''; return; }
+        if (!Array.isArray(data) || data.length === 0) {
+          showMessage('No products found for "' + query + '". Try a different search.', true);
+          resultsCount.textContent = ''; return;
+        }
+        resultsCount.textContent = data.length + ' item' + (data.length>1?'s':'');
+        renderProducts(data);
+      } catch (e) { showMessage('Network error. Please try again.', true); }
+    }
+
+    async function loadStat() {
+      try { const d = await (await fetch('/api/products')).json();
+        if (Array.isArray(d)) statCount.textContent = d.length; } catch(e){ statCount.textContent='—'; }
+    }
+
+    form.addEventListener('submit', e => { e.preventDefault(); loadProducts(input.value); });
+    document.getElementById('searchBtn').addEventListener('click', e => { e.preventDefault(); loadProducts(input.value); });
+    loadProducts('');
+    loadStat();
+  </script>
+</body>
+</html>
