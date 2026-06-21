@@ -15,16 +15,18 @@ import secrets
 import hashlib
 import contextlib
 
+from typing import Optional
+
 from flask import Flask, request, jsonify, g, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from sqlalchemy import create_engine, Integer, String, Float, Boolean, Text, select, func, inspect
+from sqlalchemy import create_engine, Integer, String, Float, Boolean, Text, select, func, inspect, false
 from sqlalchemy.orm import declarative_base, sessionmaker, Mapped, mapped_column
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# DATABASE_URL: Postgres in production (Render), SQLite by default for local dev.
+# DATABASE_URL: Postgres in production, SQLite by default for local dev.
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "toolshop.db"))
 # Render exposes the legacy "postgres://" scheme; SQLAlchemy needs "postgresql://".
 if DATABASE_URL.startswith("postgres://"):
@@ -71,7 +73,7 @@ class Product(Base):
     category: Mapped[str] = mapped_column(String(100), default="")
     in_stock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     # NULL = baseline catalog item (visible to all, editable by no one)
-    edit_token_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    edit_token_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     def to_dict(self):
         return {
@@ -233,7 +235,12 @@ def _not_found(e):
 @app.errorhandler(405)
 def _method_not_allowed(e):
     if request.path.startswith("/api/"):
-        return jsonify({"error": "method not allowed"}), 405
+        resp = jsonify({"error": "method not allowed"})
+        resp.status_code = 405
+        allow = getattr(e, "valid_methods", None)
+        if allow:
+            resp.headers["Allow"] = ", ".join(sorted(allow))
+        return resp
     return e
 
 
@@ -268,21 +275,25 @@ def list_products():
     s = get_session()
     args = request.args
 
-    # Exact-id lookup keeps its simple, list-returning behaviour.
-    exact_id = args.get("id")
-    if exact_id is not None:
-        if not exact_id.isdigit():
-            return jsonify({"error": "id must be a number"}), 400
-        value = int(exact_id)
-        rows = [] if value > MAX_ID else s.scalars(
-            select(Product).where(Product.id == value)
-        ).all()
-        resp = jsonify([p.to_dict() for p in rows])
-        resp.headers["X-Total-Count"] = str(len(rows))
-        return resp
+    allowed_query = {"search", "id", "category", "in_stock", "sort", "limit", "offset"}
+    for key in args.keys():
+        if key not in allowed_query:
+            return jsonify({"error": f"unknown query parameter: {key}"}), 400
+    for key in allowed_query:
+        if len(args.getlist(key)) > 1:
+            return jsonify({"error": f"duplicate query parameter: {key}"}), 400
 
     # Filters
     conds = []
+    exact_id = args.get("id")
+    if exact_id is not None:
+        try:
+            value = int(exact_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "id must be a number"}), 400
+        if not (1 <= value <= MAX_ID):
+            return jsonify({"error": f"id must be between 1 and {MAX_ID}"}), 400
+        conds.append(Product.id == value)
     if args.get("search"):
         conds.append(Product.name.ilike(f"%{args['search']}%"))
     if args.get("category"):
@@ -356,19 +367,47 @@ def _precondition_failed(p):
 
 @app.route("/api/products", methods=["POST"])
 def create_product():
-    data = request.get_json(silent=True) or {}
-    name = (data.get("name") or "").strip()
+    data = request.get_json(silent=True)
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "invalid JSON body (expected an object)"}), 400
+
+    name = data.get("name")
+    if name is None:
+        name = ""
+    if not isinstance(name, str):
+        return jsonify({"error": "name must be a string"}), 400
+    name = name.strip()
     if not name:
         return jsonify({"error": "name is required"}), 400
+
+    if "description" in data and not isinstance(data.get("description"), str):
+        return jsonify({"error": "description must be a string"}), 400
+    if "category" in data and not isinstance(data.get("category"), str):
+        return jsonify({"error": "category must be a string"}), 400
+
+    if "price" in data:
+        price_value = data.get("price")
+        if isinstance(price_value, bool) or not isinstance(price_value, (int, float)):
+            return jsonify({"error": "price must be a number"}), 400
+        price = float(price_value)
+        if price_value < 0:
+            return jsonify({"error": "price must be non-negative"}), 400
+    else:
+        price = 0.0
+
+    if "in_stock" in data and not isinstance(data.get("in_stock"), bool):
+        return jsonify({"error": "in_stock must be a boolean"}), 400
 
     token = secrets.token_urlsafe(24)  # the one-time secret returned to the creator
     s = get_session()
     p = Product(
         name=name,
         description=data.get("description", ""),
-        price=float(data.get("price", 0) or 0),
+        price=price,
         category=data.get("category", ""),
-        in_stock=bool(data.get("in_stock", True)),
+        in_stock=data.get("in_stock", True),
         edit_token_hash=hash_token(token),
     )
     s.add(p)
@@ -385,12 +424,12 @@ def _require_edit_token(product):
     token = request.headers.get("X-Edit-Token", "")
     if not token:
         return jsonify({"error": "X-Edit-Token header is required to modify this product"}), 401
-    if hash_token(token) != product.edit_token_hash:
+    if not hmac.compare_digest(hash_token(token), product.edit_token_hash):
         return jsonify({"error": "Invalid edit token for this product"}), 403
     return None
 
 
-@app.route("/api/products/<int:product_id>", methods=["PUT", "PATCH"])
+@app.route("/api/products/<int:product_id>", methods=["PUT"])
 def update_product(product_id):
     s = get_session()
     p = fetch_owned_or_none(s, product_id)
@@ -404,13 +443,38 @@ def update_product(product_id):
     if stale is not None:
         return stale
 
-    data = request.get_json(silent=True) or {}
-    p.name = data.get("name", p.name)
-    p.description = data.get("description", p.description)
-    p.price = float(data.get("price", p.price) or 0)
-    p.category = data.get("category", p.category)
+    data = request.get_json(silent=True)
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "invalid JSON body (expected an object)"}), 400
+
+    if "name" in data:
+        if not isinstance(data.get("name"), str):
+            return jsonify({"error": "name must be a string"}), 400
+        name = data.get("name").strip()
+        if not name:
+            return jsonify({"error": "name is required"}), 400
+        p.name = name
+    if "description" in data:
+        if not isinstance(data.get("description"), str):
+            return jsonify({"error": "description must be a string"}), 400
+        p.description = data.get("description")
+    if "price" in data:
+        price_value = data.get("price")
+        if isinstance(price_value, bool) or not isinstance(price_value, (int, float)):
+            return jsonify({"error": "price must be a number"}), 400
+        if price_value < 0:
+            return jsonify({"error": "price must be non-negative"}), 400
+        p.price = float(price_value)
+    if "category" in data:
+        if not isinstance(data.get("category"), str):
+            return jsonify({"error": "category must be a string"}), 400
+        p.category = data.get("category")
     if "in_stock" in data:
-        p.in_stock = bool(data["in_stock"])
+        if not isinstance(data.get("in_stock"), bool):
+            return jsonify({"error": "in_stock must be a boolean"}), 400
+        p.in_stock = data.get("in_stock")
     s.commit()
     resp = jsonify(p.to_dict())
     resp.headers["ETag"] = product_etag(p)
@@ -433,7 +497,8 @@ def delete_product(product_id):
 
     s.delete(p)
     s.commit()
-    return jsonify({"message": f"Product {product_id} deleted"})
+
+    return "", 204
 
 
 @app.route("/api/health")
@@ -441,7 +506,7 @@ def health():
     return jsonify({"status": "ok", "db": engine.dialect.name})
 
 
-@app.route("/api/maintenance/cleanup", methods=["POST", "GET"])
+@app.route("/api/maintenance/cleanup", methods=["POST"])
 def maintenance_cleanup():
     """Delete API-created products, keeping the baseline catalog.
 
@@ -510,10 +575,11 @@ PRODUCT_SCHEMA = {
 PRODUCT_INPUT = {
     "type": "object",
     "required": ["name"],
+
     "properties": {
-        "name": {"type": "string", "example": "Rubber Mallet"},
+        "name": {"type": "string", "minLength": 1, "example": "Rubber Mallet"},
         "description": {"type": "string", "example": "Soft mallet"},
-        "price": {"type": "number", "example": 9.9},
+        "price": {"type": "number", "minimum": 0, "example": 9.9},
         "category": {"type": "string", "example": "Hammer"},
         "in_stock": {"type": "boolean", "example": True},
     },
@@ -558,7 +624,7 @@ OPENAPI = {
                      "schema": {"type": "string"}, "example": "plier",
                      "description": "Partial, case-insensitive name match."},
                     {"name": "id", "in": "query", "required": False,
-                     "schema": {"type": "integer"}, "example": 3,
+                     "schema": {"type": "integer", "minimum": 1, "maximum": MAX_ID}, "example": 3,
                      "description": "Exact product id (returns 0 or 1 items)."},
                     {"name": "category", "in": "query", "required": False,
                      "schema": {"type": "string"}, "example": "Pliers",
@@ -571,7 +637,7 @@ OPENAPI = {
                     {"name": "limit", "in": "query", "required": False,
                      "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}},
                     {"name": "offset", "in": "query", "required": False,
-                     "schema": {"type": "integer", "minimum": 0, "default": 0}},
+                     "schema": {"type": "integer", "minimum": 0, "maximum": MAX_ID, "default": 0}},
                 ],
                 "responses": {
                     "200": {"description": "A list of products",

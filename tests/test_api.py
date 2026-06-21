@@ -145,7 +145,7 @@ def test_baseline_product_is_read_only_403(client):
 # --------------------------------------------------------------------------- #
 def test_delete_with_token_then_gone(client):
     pid, token = make_product(client)
-    assert client.delete(f"/api/products/{pid}", headers={"X-Edit-Token": token}).status_code == 200
+    assert client.delete(f"/api/products/{pid}", headers={"X-Edit-Token": token}).status_code == 204
     assert client.get(f"/api/products/{pid}").status_code == 404
 
 

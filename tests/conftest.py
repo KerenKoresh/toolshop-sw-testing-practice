@@ -35,3 +35,11 @@ def make_product(client, **fields):
     assert res.status_code == 201, res.get_json()
     data = res.get_json()
     return data["id"], data["edit_token"]
+
+
+@pytest.fixture()
+def make_product_fixture(client):
+    """Fixture wrapper around make_product for tests that prefer fixture injection."""
+    def _make(**fields):
+        return make_product(client, **fields)
+    return _make
