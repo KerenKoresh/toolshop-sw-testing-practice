@@ -13,7 +13,7 @@ import hashlib
 
 from flask import Flask, request, jsonify, g, render_template
 from flask_cors import CORS
-from sqlalchemy import create_engine, Integer, String, Float, Boolean, Text, select, func
+from sqlalchemy import create_engine, Integer, String, Float, Boolean, Text, select, func, inspect
 from sqlalchemy.orm import declarative_base, sessionmaker, Mapped, mapped_column
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -79,6 +79,7 @@ SEED_PRODUCTS = [
 
 def init_db():
     Base.metadata.create_all(engine)
+    _repair_schema_drift()
     with SessionLocal() as s:
         count = s.scalar(select(func.count()).select_from(Product))
         if count == 0:
@@ -88,6 +89,27 @@ def init_db():
                 for (n, d, p, c) in SEED_PRODUCTS
             )
             s.commit()
+
+
+def _repair_schema_drift():
+    """If the existing `products` table is missing columns the model expects
+    (e.g. it was created by an older app version), recreate it.
+
+    create_all() never ALTERs an existing table, so a schema left over from a
+    previous version would make every query fail. This keeps the app self-healing.
+    Destructive: the catalog is re-seeded afterwards by init_db().
+    """
+    insp = inspect(engine)
+    if not insp.has_table("products"):
+        return
+    actual = {c["name"] for c in insp.get_columns("products")}
+    expected = set(Product.__table__.columns.keys())
+    missing = expected - actual
+    if missing:
+        print(f"[init_db] schema drift detected (missing {sorted(missing)}); "
+              f"recreating 'products' table")
+        Base.metadata.drop_all(engine)
+        Base.metadata.create_all(engine)
 
 
 def hash_token(token):
