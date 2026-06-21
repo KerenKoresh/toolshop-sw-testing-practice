@@ -49,6 +49,129 @@
         </div>
       </div>
 
+      <h2>Architecture</h2>
+      <p>A single Flask application serves both the rendered pages and the JSON API.
+        Click any component to see what it does.</p>
+
+      <div class="arch">
+        <svg viewBox="0 0 960 560" role="img" aria-label="ToolShop system architecture diagram">
+          <defs>
+            <marker id="arr" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto">
+              <path d="M0,0 L6.5,3 L0,6 Z" fill="#b3b3b3"></path>
+            </marker>
+          </defs>
+
+          <!-- connectors (drawn first; nodes cover them so dots show only in the gaps) -->
+          <line x1="480" y1="86"  x2="480" y2="150" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
+          <line x1="480" y1="306" x2="480" y2="350" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
+          <line x1="480" y1="406" x2="480" y2="450" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
+          <line x1="236" y1="242" x2="296" y2="242" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
+          <line x1="724" y1="242" x2="664" y2="242" stroke="#c9c9c9" stroke-width="2" marker-end="url(#arr)"></line>
+          <text x="266" y="232" text-anchor="middle" fill="#9a9a9a" font-size="11">loads spec · calls API</text>
+          <text x="694" y="232" text-anchor="middle" fill="#9a9a9a" font-size="11">daily cleanup</text>
+
+          <!-- animated request-flow dots (hidden behind node boxes) -->
+          <circle r="4.5" fill="#f2691e"><animateMotion dur="2.2s" repeatCount="indefinite" path="M480,90 L480,520"></animateMotion></circle>
+          <circle r="4.5" fill="#ff8a3d"><animateMotion dur="2.2s" begin="0.8s" repeatCount="indefinite" path="M480,90 L480,520"></animateMotion></circle>
+          <circle r="4.5" fill="#f2691e" opacity="0.5"><animateMotion dur="2.2s" begin="1.5s" repeatCount="indefinite" path="M480,90 L480,520"></animateMotion></circle>
+
+          <!-- Clients -->
+          <g class="nodeg" data-key="clients">
+            <rect class="box" x="380" y="26" width="200" height="60" rx="14" fill="#1c1c1c"></rect>
+            <text x="480" y="52" text-anchor="middle" fill="#fff" font-size="16" font-weight="800">Clients</text>
+            <text x="480" y="72" text-anchor="middle" fill="#bdbdbd" font-size="11">Browser · curl · Postman</text>
+          </g>
+
+          <!-- Flask container + inner components -->
+          <rect x="296" y="150" width="368" height="156" rx="16" fill="#fbfbfb" stroke="#e2e2e2"></rect>
+          <text x="316" y="176" fill="#1c1c1c" font-size="13" font-weight="800" letter-spacing="1">FLASK APPLICATION</text>
+          <g class="nodeg" data-key="pages">
+            <rect class="box" x="312" y="196" width="108" height="94" rx="12" fill="#f1f1f1"></rect>
+            <text x="366" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">Web pages</text>
+            <text x="366" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/ · /product</text>
+            <text x="366" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/guide · /docs</text>
+          </g>
+          <g class="nodeg" data-key="api">
+            <rect class="box" x="430" y="196" width="104" height="94" rx="12" fill="#f1f1f1"></rect>
+            <text x="482" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">REST API</text>
+            <text x="482" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">/api/products</text>
+            <text x="482" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">CRUD · search</text>
+          </g>
+          <g class="nodeg" data-key="openapi">
+            <rect class="box" x="544" y="196" width="108" height="94" rx="12" fill="#f1f1f1"></rect>
+            <text x="598" y="236" text-anchor="middle" fill="#1c1c1c" font-size="14" font-weight="800">OpenAPI</text>
+            <text x="598" y="256" text-anchor="middle" fill="#7c7c7c" font-size="10.5">openapi.json</text>
+            <text x="598" y="270" text-anchor="middle" fill="#7c7c7c" font-size="10.5">3.0 spec</text>
+          </g>
+
+          <!-- SQLAlchemy -->
+          <g class="nodeg" data-key="orm">
+            <rect class="box" x="360" y="350" width="240" height="56" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
+            <text x="480" y="384" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">SQLAlchemy ORM</text>
+          </g>
+
+          <!-- Database -->
+          <g class="nodeg" data-key="db">
+            <rect class="box" x="360" y="450" width="240" height="72" rx="14" fill="#1c1c1c"></rect>
+            <text x="480" y="484" text-anchor="middle" fill="#fff" font-size="16" font-weight="800">Database</text>
+            <text x="480" y="505" text-anchor="middle" fill="#bdbdbd" font-size="11">PostgreSQL / SQLite</text>
+          </g>
+
+          <!-- Swagger UI -->
+          <g class="nodeg" data-key="swagger">
+            <rect class="box" x="56" y="200" width="180" height="84" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
+            <text x="146" y="236" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">Swagger UI</text>
+            <text x="146" y="258" text-anchor="middle" fill="#7c7c7c" font-size="11">/docs · Try it out</text>
+          </g>
+
+          <!-- Cleanup job -->
+          <g class="nodeg" data-key="cron">
+            <rect class="box" x="724" y="200" width="180" height="84" rx="14" fill="#fff" stroke="#e2e2e2"></rect>
+            <text x="814" y="232" text-anchor="middle" fill="#1c1c1c" font-size="15" font-weight="800">Cleanup job</text>
+            <text x="814" y="252" text-anchor="middle" fill="#7c7c7c" font-size="11">daily 00:00 (IST)</text>
+            <text x="814" y="268" text-anchor="middle" fill="#7c7c7c" font-size="11">removes API items</text>
+          </g>
+        </svg>
+
+        <div class="arch-panel" id="archPanel">
+          <p class="hint">Click a component above to see what it does.</p>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const INFO = {
+            clients: ['Clients',
+              'Browsers viewing the catalog and API clients such as curl, Postman or Swagger UI. They all talk to the same public HTTP endpoints.'],
+            pages: ['Web pages',
+              'Server-rendered HTML: the catalog and search (/), product detail (/product/<id>), this guide, and the docs page. No front-end build step.'],
+            api: ['REST API',
+              'The public JSON API: list and search products, get one by ID, create, update and delete (CRUD), a health check, and a secret-protected cleanup endpoint.'],
+            openapi: ['OpenAPI spec',
+              'An OpenAPI 3.0 document served at /api/openapi.json. It is generated in code, so the documentation can never drift from the actual routes.'],
+            orm: ['SQLAlchemy ORM',
+              'Maps the Product model to SQL and runs every query. It abstracts the database engine, so the same code works on PostgreSQL and SQLite.'],
+            db: ['Database',
+              'PostgreSQL in production and SQLite locally, chosen automatically from DATABASE_URL. The schema is created and self-healed on boot, with a multi-worker init lock.'],
+            swagger: ['Swagger UI',
+              'Served at /docs. It loads the OpenAPI document and lets you call the live API directly with "Try it out", so the docs always match the real endpoints.'],
+            cron: ['Cleanup job',
+              'A scheduled job (Render cron or an external scheduler) calls the cleanup routine every midnight, Israel time, to delete API-created products and keep only the baseline catalog.'],
+          };
+          const panel = document.getElementById('archPanel');
+          const nodes = document.querySelectorAll('.arch .nodeg');
+          function select(key, el) {
+            nodes.forEach(n => n.classList.toggle('active', n === el));
+            const [t, d] = INFO[key];
+            panel.innerHTML = '<h4>' + t + '</h4><p>' + d + '</p>';
+          }
+          nodes.forEach(el => {
+            const key = el.getAttribute('data-key');
+            el.addEventListener('click', () => select(key, el));
+          });
+        })();
+      </script>
+
       <h2>How ownership works</h2>
       <p>There is no login. Reading and searching are open to everyone. When you
         <strong>create</strong> a product through the API, the response includes a one-time

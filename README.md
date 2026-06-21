@@ -68,15 +68,32 @@ There are no user accounts. Reading and searching are open to everyone; modifyin
 
 ## Architecture
 
-```
-Browser  ->  Flask  ->  SQLAlchemy  ->  PostgreSQL / SQLite
-   |          |
-   |          |-- HTML pages:  /  /product/<id>  /guide  /docs
-   |          \-- JSON API:    /api/products ...  +  /api/openapi.json
-   \-- Swagger UI (loads the OpenAPI spec and calls the same API)
+```mermaid
+flowchart TD
+    Client["Clients: Browser, curl, Postman"]
+
+    subgraph Flask["Flask application"]
+        Pages["Web pages: / · /product · /guide · /docs"]
+        API["REST API: /api/products · CRUD · search"]
+        Spec["OpenAPI 3.0: /api/openapi.json"]
+    end
+
+    ORM["SQLAlchemy ORM"]
+    DB[("Database: PostgreSQL / SQLite")]
+    Swagger["Swagger UI: /docs"]
+    Cron["Cleanup job: daily 00:00 IST"]
+
+    Client --> Pages
+    Client --> API
+    Pages --> ORM
+    API --> ORM
+    ORM --> DB
+    Swagger -->|loads spec| Spec
+    Swagger -->|Try it out| API
+    Cron -->|delete API items| API
 ```
 
-A single Flask app serves both the rendered pages and the JSON API. The OpenAPI document is generated in Python and exposed at `/api/openapi.json`; the `/docs` page is a thin Swagger UI shell that consumes it, so the docs can never drift from the routes.
+A single Flask app serves both the rendered pages and the JSON API. The OpenAPI document is generated in Python and exposed at `/api/openapi.json`; the `/docs` page is a thin Swagger UI shell that consumes it, so the docs can never drift from the routes. The live site also includes an interactive version of this diagram on the `/guide` page.
 
 ## API reference
 
