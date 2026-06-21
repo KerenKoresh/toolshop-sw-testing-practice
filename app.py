@@ -152,7 +152,8 @@ def register():
 
     cur = db.execute(
         "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
-        (email, generate_password_hash(password), datetime.datetime.utcnow().isoformat()),
+        (email, generate_password_hash(password, method="pbkdf2:sha256"),
+         datetime.datetime.utcnow().isoformat()),
     )
     user_id = cur.lastrowid
     seed_user_products(db, user_id)  # give the new user a starter catalog
