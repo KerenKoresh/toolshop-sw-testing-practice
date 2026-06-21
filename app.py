@@ -10,6 +10,7 @@ is required to update or delete that specific product. Only its hash is stored.
 import os
 import secrets
 import hashlib
+import contextlib
 
 from flask import Flask, request, jsonify, g, render_template
 from flask_cors import CORS
@@ -77,18 +78,41 @@ SEED_PRODUCTS = [
 ]
 
 
+@contextlib.contextmanager
+def _init_lock():
+    """Serialize DB initialization across gunicorn workers (same host).
+
+    Without this, multiple workers can run create_all / drop_all concurrently and
+    crash with 'table already exists'. We use an OS file lock, which works for both
+    SQLite and Postgres deployments. Falls back to no-op where fcntl is unavailable.
+    """
+    try:
+        import fcntl
+    except ImportError:  # e.g. Windows local dev
+        yield
+        return
+    lock_path = os.path.join(BASE_DIR, ".init.lock")
+    with open(lock_path, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
+
+
 def init_db():
-    Base.metadata.create_all(engine)
-    _repair_schema_drift()
-    with SessionLocal() as s:
-        count = s.scalar(select(func.count()).select_from(Product))
-        if count == 0:
-            s.add_all(
-                Product(name=n, description=d, price=p, category=c, in_stock=True,
-                        edit_token_hash=None)
-                for (n, d, p, c) in SEED_PRODUCTS
-            )
-            s.commit()
+    with _init_lock():
+        Base.metadata.create_all(engine, checkfirst=True)
+        _repair_schema_drift()
+        with SessionLocal() as s:
+            count = s.scalar(select(func.count()).select_from(Product))
+            if count == 0:
+                s.add_all(
+                    Product(name=n, description=d, price=p, category=c, in_stock=True,
+                            edit_token_hash=None)
+                    for (n, d, p, c) in SEED_PRODUCTS
+                )
+                s.commit()
 
 
 def _repair_schema_drift():
@@ -258,6 +282,11 @@ def index():
 @app.route("/product/<int:product_id>")
 def product_page(product_id):
     return render_template("product.html", product_id=product_id)
+
+
+@app.route("/guide")
+def guide_page():
+    return render_template("guide.html")
 
 
 @app.route("/docs")

@@ -1,99 +1,162 @@
 # ToolShop
 
-חנות כלים פשוטה בהשראת practicesoftwaretesting.com — עם API ציבורי ואתר עם תיבת חיפוש.
+A small but complete full-stack demo store — a public web catalog backed by a fully documented REST API. Inspired by [practicesoftwaretesting.com](https://practicesoftwaretesting.com), it's built to be a clean, realistic target for API testing, automation practice, and front-end/back-end demos.
 
-## מה יש כאן
+**Live demo:** https://kerens-software-testing-practice.onrender.com
+**API docs (Swagger UI):** https://kerens-software-testing-practice.onrender.com/docs
 
-- **Backend**: Flask + SQLAlchemy — Postgres בענן (`DATABASE_URL`), SQLite מקומית כברירת מחדל
-- **עיצוב**: תבנית [Dopetrope](https://html5up.net) של HTML5 UP (נכסי התבנית ב-`static/theme/`)
-- **בלי משתמשים**: הקטלוג ציבורי לצפייה. עריכה/מחיקה מוגבלת לבעל ה-**edit-token** של הפריט
-- **האתר לצפייה בלבד**: עיון, חיפוש, וצפייה בפריט. **כל פעולות הכתיבה (יצירה/עדכון/מחיקה) דרך ה-API בלבד** (ראי `/docs`)
-- **דף תיעוד Swagger** (`/docs`): תיעוד אינטראקטיבי עם "Try it out"
-- **CORS פתוח** — ה-API נגיש מכל מקור
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-CA2C2E)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-336791?logo=postgresql&logoColor=white)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?logo=openapiinitiative&logoColor=white)
 
-## איך עובדת הבעלות (edit-token)
+---
 
-אין הרשמה ואין login. כשיוצרים מוצר דרך ה-API, התשובה כוללת **פעם אחת** שדה `edit_token` (מחרוזת סודית). רק ה-hash שלו נשמר ב-DB. כדי לעדכן או למחוק את אותו מוצר חייבים לשלוח את ה-token ב-header:
-`X-Edit-Token: <token>`
+## Table of contents
 
-שמרי את ה-token שקיבלת ביצירה — בלעדיו אי אפשר לערוך או למחוק את הפריט. מוצרי הקטלוג הבסיסי (seed) אינם ניתנים לעריכה (אין להם token).
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [API reference](#api-reference)
+- [Ownership model (edit tokens)](#ownership-model-edit-tokens)
+- [Data model](#data-model)
+- [Project structure](#project-structure)
+- [Running locally](#running-locally)
+- [Database migrations](#database-migrations)
+- [Deployment (Render + Postgres)](#deployment-render--postgres)
+- [Design notes](#design-notes)
+- [Author](#author)
 
-## עמודי האתר
+---
 
-| עמוד | כתובת |
-|------|-------|
-| חנות + חיפוש | `/` |
-| פרטי מוצר | `/product/<id>` |
-| תיעוד API (Swagger) | `/docs` |
+## Overview
 
-## הרצה מקומית
+ToolShop serves two audiences from one codebase:
 
-```bash
-cd toolshop
-pip install -r requirements.txt
-python app.py
-# פתחי http://localhost:5000
+- **Humans** get a responsive catalog at `/` where they can browse tools, search by name or ID, and open any product's detail page.
+- **Machines** get a public JSON REST API at `/api` with full create / read / update / delete support and interactive OpenAPI documentation at `/docs`.
+
+There are no user accounts. Reading and searching are open to everyone; modifying a product is protected by a per-item secret (see [Ownership model](#ownership-model-edit-tokens)). All write operations are performed through the API only — the website is intentionally read-only.
+
+## Features
+
+- **Public REST API** with full CRUD over JSON and permissive CORS.
+- **Search** by partial, case-insensitive name (`?search=`) or exact ID (`?id=`).
+- **Interactive API docs** — a complete OpenAPI 3.0 spec rendered with Swagger UI, including "Try it out".
+- **Token-based ownership** — no logins; creating a product returns a one-time secret required to edit or delete it. Only a hash is stored.
+- **Database-agnostic** — runs on PostgreSQL in production and SQLite locally, selected automatically via `DATABASE_URL`.
+- **Self-healing schema** — detects and repairs schema drift on boot, with a concurrency-safe, multi-worker initialization lock.
+- **A dedicated guide page** (`/guide`) explaining the project and every endpoint.
+- **One-command deploy** to Render via a Blueprint (`render.yaml`) that also provisions Postgres.
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Language | Python 3.12 |
+| Web framework | Flask 3 |
+| ORM | SQLAlchemy 2.0 |
+| Database | PostgreSQL (prod) / SQLite (local) |
+| API server | Gunicorn |
+| API docs | OpenAPI 3.0 + Swagger UI |
+| Front end | Server-rendered HTML + vanilla JS (no build step) |
+| Hosting | Render |
+
+## Architecture
+
+```
+Browser ──► Flask ──► SQLAlchemy ──► PostgreSQL / SQLite
+   │           │
+   │           ├── HTML pages:  /  /product/<id>  /guide  /docs
+   │           └── JSON API:    /api/products ...  +  /api/openapi.json
+   └── Swagger UI (loads the OpenAPI spec and calls the same API)
 ```
 
-## מיגרציה / אתחול DB
+A single Flask app serves both the rendered pages and the JSON API. The OpenAPI document is generated in Python and exposed at `/api/openapi.json`; the `/docs` page is a thin Swagger UI shell that consumes it, so the docs can never drift from the routes.
 
-הסקריפט יוצר את הסכמה וזורע את הקטלוג הבסיסי אם הוא ריק. עובד מול ה-DB שב-`DATABASE_URL`:
+## API reference
 
-```bash
-python scripts/migrate.py            # יצירת טבלאות + seed אם ריק (idempotent)
-python scripts/migrate.py --status   # הצגת מצב נוכחי בלבד
-python scripts/migrate.py --reset    # מחיקת כל הטבלאות, יצירה מחדש וזריעה
-```
+Base URL: `/api`. All responses are JSON. Reads and creates are open; updates and deletes require the product's edit token in the `X-Edit-Token` header.
 
-הריצי פעם אחת אחרי הקמת Postgres חדש. (האפליקציה גם מאתחלת אוטומטית בעלייה, אז זה בעיקר ל-reset/בקרה.)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/products` | — | List all products |
+| `GET` | `/api/products?search=plier` | — | Search by partial, case-insensitive name |
+| `GET` | `/api/products?id=3` | — | Exact ID lookup (returns a list of 0–1 items) |
+| `GET` | `/api/products/{id}` | — | Get a single product by ID |
+| `POST` | `/api/products` | — | Create a product (returns a one-time `edit_token`) |
+| `PUT` / `PATCH` | `/api/products/{id}` | `X-Edit-Token` | Update a product |
+| `DELETE` | `/api/products/{id}` | `X-Edit-Token` | Delete a product |
+| `GET` | `/api/health` | — | Health check (reports the active DB engine) |
 
-## API
-
-בסיס: `/api` — קריאה ויצירה פתוחות לכולם. עדכון ומחיקה דורשים `X-Edit-Token`.
-
-| Method | Endpoint | Auth | תיאור |
-|--------|----------|------|-------|
-| GET | `/api/products` | — | כל המוצרים |
-| GET | `/api/products?search=plier` | — | חיפוש לפי שם חלקי (case-insensitive) |
-| GET | `/api/products?id=3` | — | מוצר לפי ID מדויק (רשימה) |
-| GET | `/api/products/3` | — | מוצר בודד לפי ID |
-| POST | `/api/products` | — | יצירת מוצר (מחזיר `edit_token`) |
-| PUT/PATCH | `/api/products/3` | `X-Edit-Token` | עדכון מוצר |
-| DELETE | `/api/products/3` | `X-Edit-Token` | מחיקת מוצר |
-| GET | `/api/health` | — | בדיקת בריאות |
-
-### דוגמאות
+### Examples
 
 ```bash
-# יצירה — שמרי את ה-edit_token מהתשובה
-curl -X POST http://localhost:5000/api/products \
+# Create — keep the edit_token from the response
+curl -X POST https://kerens-software-testing-practice.onrender.com/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"Rubber Mallet","price":9.9,"category":"Hammer"}'
-# -> {"id": 13, ..., "edit_token": "AbC123..."}
+# -> { "id": 13, ..., "edit_token": "AbC123..." }
 
-# עדכון (עם ה-token)
-curl -X PUT http://localhost:5000/api/products/13 \
+# Update (token required)
+curl -X PUT https://kerens-software-testing-practice.onrender.com/api/products/13 \
   -H "Content-Type: application/json" \
   -H "X-Edit-Token: AbC123..." \
   -d '{"price":19.99,"in_stock":false}'
 
-# מחיקה (עם ה-token)
-curl -X DELETE http://localhost:5000/api/products/13 \
+# Delete (token required)
+curl -X DELETE https://kerens-software-testing-practice.onrender.com/api/products/13 \
   -H "X-Edit-Token: AbC123..."
 
-# חיפוש לפי שם חלקי
-curl "http://localhost:5000/api/products?search=plier"
-
-# לפי ID מדויק
-curl "http://localhost:5000/api/products?id=3"
+# Search and exact lookup
+curl "https://kerens-software-testing-practice.onrender.com/api/products?search=plier"
+curl "https://kerens-software-testing-practice.onrender.com/api/products?id=3"
 ```
 
-מבנה מוצר:
+### Status codes
+
+| Code | When |
+|------|------|
+| `200` | Successful read / update / delete |
+| `201` | Product created |
+| `400` | Invalid input (e.g. missing `name`, non-numeric `id`) |
+| `401` | Edit token required but not provided |
+| `403` | Wrong edit token, or attempting to modify a read-only baseline product |
+| `404` | Product not found |
+
+## Ownership model (edit tokens)
+
+The API is public, so anyone can create products — but a product should only be editable by whoever created it, without forcing accounts and passwords. ToolShop solves this with **per-item edit tokens**:
+
+1. `POST /api/products` generates a random secret and returns it once as `edit_token`. Only its SHA-256 hash is persisted.
+2. `PUT` / `DELETE` require that token in the `X-Edit-Token` header; the server compares hashes.
+3. Seeded baseline products have no token and are therefore read-only.
+
+This keeps the API open and scriptable while still scoping mutations to their creator — a pragmatic alternative to full authentication for a public demo.
+
+## Data model
+
+A single `products` table:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | integer | Primary key, auto-increment |
+| `name` | string | Required |
+| `description` | text | Optional |
+| `price` | float | Defaults to 0 |
+| `category` | string | Optional |
+| `in_stock` | boolean | Defaults to true |
+| `edit_token_hash` | string | SHA-256 of the edit token; `NULL` for read-only baseline items |
+
+JSON representation:
+
 ```json
 {
   "id": 1,
   "name": "Combination Pliers",
-  "description": "...",
+  "description": "Durable steel combination pliers.",
   "price": 14.15,
   "category": "Pliers",
   "in_stock": true,
@@ -101,33 +164,86 @@ curl "http://localhost:5000/api/products?id=3"
 }
 ```
 
-## פריסה לרשת (זמין לכולם)
+## Project structure
 
-האתר מוכן לפריסה. שתי אופציות חינמיות מומלצות:
-
-### אפשרות א' — Render עם Postgres (מומלץ, נתונים נשמרים)
-
-הקובץ `render.yaml` כבר מגדיר גם **Postgres** וגם את ה-Web Service, ומחבר ביניהם אוטומטית דרך `DATABASE_URL`.
-
-1. העלי את התיקייה ל-GitHub repo.
-2. ב-[render.com](https://render.com) → **New → Blueprint** → חברי את ה-repo.
-3. Render יקרא את `render.yaml`, ייצור את ה-Postgres ואת השירות, ויזריק את `DATABASE_URL`.
-4. Deploy. תקבלי כתובת ציבורית כמו `https://toolshop.onrender.com`. הנתונים נשמרים בין deploys.
-
-> בלי `DATABASE_URL` האפליקציה נופלת חזרה ל-SQLite מקומי (טוב לפיתוח). אפשר לראות איזה DB פעיל ב-`/api/health`.
-
-### אפשרות ב' — Railway
-
-1. [railway.app](https://railway.app) → New Project → Deploy from GitHub.
-2. Railway יזהה את ה-`Procfile` (`web: gunicorn app:app`).
-3. תחת Settings → Networking → Generate Domain כדי לקבל כתובת ציבורית.
-
-### Docker (לכל ספק שתומך)
-
-```bash
-docker build -t toolshop .
-docker run -p 8080:8080 toolshop
+```
+toolshop/
+├── app.py                 # Flask app: API, pages, OpenAPI spec, DB init
+├── scripts/
+│   └── migrate.py         # Schema bootstrap, drift check, and reset
+├── templates/
+│   ├── index.html         # Catalog + search
+│   ├── product.html       # Product detail
+│   ├── guide.html         # Project & API guide
+│   └── docs.html          # Swagger UI
+├── static/
+│   └── app.css            # Front-end styling
+├── requirements.txt
+├── Procfile               # Process definition (Gunicorn)
+├── Dockerfile             # Container build
+├── render.yaml            # Render Blueprint (web service + Postgres)
+└── README.md
 ```
 
-> הערה: עם Postgres הנתונים נשמרים בין deploys (בניגוד ל-SQLite על דיסק זמני).
-> ה-Postgres החינמי של Render מוגבל בזמן — שדרגי לתוכנית בתשלום לשימוש ארוך טווח.
+## Running locally
+
+Requires Python 3.10+.
+
+```bash
+git clone <your-repo-url>
+cd toolshop
+pip install -r requirements.txt
+python app.py
+# open http://localhost:5000
+```
+
+With no `DATABASE_URL` set, the app uses a local SQLite file (`toolshop.db`) and seeds a starter catalog automatically.
+
+## Database migrations
+
+`scripts/migrate.py` manages the schema against whatever `DATABASE_URL` points to:
+
+```bash
+python scripts/migrate.py            # create tables + seed if empty (idempotent)
+python scripts/migrate.py --check    # compare live DB columns to the model (drift)
+python scripts/migrate.py --status   # print row counts and the active engine
+python scripts/migrate.py --reset    # DROP all tables, recreate, and reseed
+```
+
+To target a remote database, pass `DATABASE_URL` inline:
+
+```bash
+DATABASE_URL="postgresql://user:pass@host/db" python scripts/migrate.py --check
+```
+
+The app also self-heals on boot: if the live table is missing columns the model expects (schema drift from an older version), it recreates the table. Initialization is guarded by an OS-level lock so multiple Gunicorn workers never run DDL concurrently.
+
+## Deployment (Render + Postgres)
+
+The included `render.yaml` provisions a free PostgreSQL instance and a web service, wiring `DATABASE_URL` between them automatically.
+
+1. Push this repository to GitHub.
+2. In Render, choose **New → Blueprint** and connect the repo. Render reads `render.yaml`, creates the database and the service, and injects `DATABASE_URL`.
+3. Deploy. You'll get a public URL such as `https://<app>.onrender.com`.
+
+If you deploy as a plain Web Service instead of a Blueprint, add a `DATABASE_URL` environment variable pointing to your Postgres instance — otherwise the app falls back to an ephemeral SQLite file that resets on every deploy. The active engine is visible at `/api/health`.
+
+```bash
+# Build:  pip install -r requirements.txt
+# Start:  python scripts/migrate.py && gunicorn app:app --bind 0.0.0.0:$PORT
+```
+
+A `Dockerfile` is also provided for any container host.
+
+## Design notes
+
+- **Docs that can't lie** — Swagger UI consumes the same OpenAPI document the app publishes, so the reference always matches the routes.
+- **No-login ownership** — edit tokens scope writes to their creator without storing credentials, fitting a public, scriptable API.
+- **Operational resilience** — automatic schema-drift repair plus a multi-worker init lock keep deploys from crash-looping on schema changes.
+- **Portability** — one codebase, two databases (`DATABASE_URL`), no front-end build step.
+
+## Author
+
+**Keren Koresh**
+
+Built as a portfolio project demonstrating full-stack development, REST API design, OpenAPI documentation, and cloud deployment.

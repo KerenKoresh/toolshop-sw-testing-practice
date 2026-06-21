@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guide · ToolShop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body>
+  <div class="shell">
+
+    <header class="topbar">
+      <div class="brand"><span class="logo"></span> ToolShop</div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/#catalog">Catalog</a>
+        <a href="/guide" class="active">Guide</a>
+        <a href="/docs">API Docs</a>
+      </nav>
+      <a class="btn-dark" href="/docs">Public API</a>
+    </header>
+
+    <section class="hero" style="padding-bottom:8px;">
+      <div class="hero-tag">[ GUIDE ]</div>
+      <h1>What ToolShop does</h1>
+      <p class="lead">ToolShop is a small full-stack demo store inspired by
+        practicesoftwaretesting.com. It pairs a clean catalog UI with a fully public REST
+        API, so the same products you browse here can also be created, searched, updated and
+        deleted programmatically — ideal for API testing, automation practice and demos.</p>
+    </section>
+
+    <div class="prose">
+
+      <div class="cards-3">
+        <div class="mini">
+          <div class="k">🛍️</div>
+          <h4>Browse &amp; search</h4>
+          <p>A public catalog you can search by partial name or look up by exact ID.</p>
+        </div>
+        <div class="mini">
+          <div class="k">🔌</div>
+          <h4>Public REST API</h4>
+          <p>Full CRUD over JSON. Interactive docs with "Try it out" at <code>/docs</code>.</p>
+        </div>
+        <div class="mini">
+          <div class="k">🔑</div>
+          <h4>Edit tokens</h4>
+          <p>No accounts. Creating a product returns a secret token required to edit or delete it.</p>
+        </div>
+      </div>
+
+      <h2>How ownership works</h2>
+      <p>There is no login. Reading and searching are open to everyone. When you
+        <strong>create</strong> a product through the API, the response includes a one-time
+        <code>edit_token</code> — a random secret. Only a SHA-256 hash of it is stored on the
+        server. To later <strong>update</strong> or <strong>delete</strong> that product you must
+        send the same token in the <code>X-Edit-Token</code> request header. Products in the
+        seeded baseline catalog have no token and are therefore read-only.</p>
+
+      <h2>The API, request by request</h2>
+      <p>Base URL: <code>/api</code>. All responses are JSON. Below is exactly what each
+        request does.</p>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method get">GET</span>
+          <span class="path">/api/products</span>
+          <span class="auth open">No auth</span>
+        </div>
+        <p class="desc">Returns the full catalog. Supports two optional query parameters:
+          <code>?search=&lt;text&gt;</code> for a partial, case-insensitive match on the product
+          name, or <code>?id=&lt;number&gt;</code> for an exact ID lookup (returns a list of 0 or
+          1 items).</p>
+        <pre>curl "https://kerens-software-testing-practice.onrender.com/api/products?search=plier"</pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method get">GET</span>
+          <span class="path">/api/products/{id}</span>
+          <span class="auth open">No auth</span>
+        </div>
+        <p class="desc">Returns a single product by its ID, or <code>404</code> if it does not
+          exist.</p>
+        <pre>curl "https://kerens-software-testing-practice.onrender.com/api/products/3"</pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method post">POST</span>
+          <span class="path">/api/products</span>
+          <span class="auth open">No auth</span>
+        </div>
+        <p class="desc">Creates a product. <code>name</code> is required; <code>description</code>,
+          <code>price</code>, <code>category</code> and <code>in_stock</code> are optional. The
+          response includes the created product <strong>and a one-time <code>edit_token</code></strong>
+          — save it, it is the only way to modify the product later.</p>
+        <pre>curl -X POST https://kerens-software-testing-practice.onrender.com/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Rubber Mallet","price":9.9,"category":"Hammer"}'</pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method put">PUT</span>
+          <span class="path">/api/products/{id}</span>
+          <span class="auth token">X-Edit-Token</span>
+        </div>
+        <p class="desc">Updates a product. Any omitted field keeps its current value. Requires the
+          product's <code>edit_token</code> in the <code>X-Edit-Token</code> header. Returns
+          <code>401</code> if the header is missing, <code>403</code> if the token is wrong or the
+          product is a read-only baseline item, and <code>404</code> if it does not exist.</p>
+        <pre>curl -X PUT https://kerens-software-testing-practice.onrender.com/api/products/13 \
+  -H "Content-Type: application/json" \
+  -H "X-Edit-Token: &lt;your-token&gt;" \
+  -d '{"price":19.99,"in_stock":false}'</pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method del">DELETE</span>
+          <span class="path">/api/products/{id}</span>
+          <span class="auth token">X-Edit-Token</span>
+        </div>
+        <p class="desc">Deletes a product. Requires the matching <code>edit_token</code>. Same
+          error codes as update (<code>401 / 403 / 404</code>).</p>
+        <pre>curl -X DELETE https://kerens-software-testing-practice.onrender.com/api/products/13 \
+  -H "X-Edit-Token: &lt;your-token&gt;"</pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="sig">
+          <span class="method get">GET</span>
+          <span class="path">/api/health</span>
+          <span class="auth open">No auth</span>
+        </div>
+        <p class="desc">Lightweight health check. Returns <code>{"status":"ok","db":"..."}</code>
+          including the active database engine (<code>sqlite</code> or <code>postgresql</code>).</p>
+        <pre>curl "https://kerens-software-testing-practice.onrender.com/api/health"</pre>
+      </div>
+
+      <h2>Product shape</h2>
+      <pre style="background:#1c1c1c;color:#eee;padding:14px 16px;border-radius:10px;overflow-x:auto;">{
+  "id": 1,
+  "name": "Combination Pliers",
+  "description": "Durable steel combination pliers.",
+  "price": 14.15,
+  "category": "Pliers",
+  "in_stock": true,
+  "editable": false
+}</pre>
+
+      <h2>Pages on this site</h2>
+      <ul>
+        <li><code>/</code> — catalog with search; click a product to open its details in a new tab.</li>
+        <li><code>/product/&lt;id&gt;</code> — a single product's detail page.</li>
+        <li><code>/guide</code> — this page.</li>
+        <li><code>/docs</code> — interactive Swagger UI for the API.</li>
+      </ul>
+    </div>
+
+    <footer class="foot">
+      <span>&copy; 2026 Keren Koresh — ToolShop</span>
+      <span>Reads &amp; search are open · writes via <a href="/docs">API</a></span>
+    </footer>
+
+  </div>
+</body>
+</html>
