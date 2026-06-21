@@ -1,0 +1,110 @@
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --primary: #0d6efd;
+  --text: #1f2933;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --danger: #dc2626;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--primary);
+  color: #fff;
+  padding: 18px 24px;
+}
+header h1 { margin: 0; font-size: 22px; }
+header a { color: #fff; text-decoration: none; }
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.search-bar input {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.search-bar button {
+  padding: 12px 20px;
+  font-size: 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search-bar button:hover { background: #0b5ed7; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .15s;
+}
+.card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  transform: translateY(-2px);
+}
+.card h3 { margin: 0 0 6px; font-size: 17px; }
+.card .price { color: var(--primary); font-weight: 700; font-size: 18px; }
+.card .cat { color: var(--muted); font-size: 13px; }
+.card .stock { font-size: 13px; margin-top: 6px; }
+.in { color: #16a34a; }
+.out { color: var(--danger); }
+
+.message {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+.error {
+  background: #fee2e2;
+  color: var(--danger);
+  border: 1px solid #fca5a5;
+}
+.info {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #7dd3fc;
+}
+
+.detail {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+}
+.detail h2 { margin-top: 0; }
+.detail .price { color: var(--primary); font-size: 28px; font-weight: 800; }
+.detail dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; margin-top: 20px; }
+.detail dt { color: var(--muted); }
+.muted { color: var(--muted); }
+.hidden { display: none; }

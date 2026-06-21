@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product · ToolShop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1><a href="/">🛠️ ToolShop</a></h1>
+  </header>
+
+  <div class="container">
+    <p><a href="/">&larr; Back to shop</a></p>
+    <div id="content"></div>
+  </div>
+
+  <script>
+    const productId = {{ product_id }};
+    const content = document.getElementById('content');
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    async function loadProduct() {
+      try {
+        const res = await fetch('/api/products/' + productId);
+        const data = await res.json();
+
+        if (!res.ok) {
+          content.innerHTML =
+            '<div class="message error">' + escapeHtml(data.error || 'Product not found') + '</div>';
+          document.title = 'Not found · ToolShop';
+          return;
+        }
+
+        document.title = data.name + ' · ToolShop';
+        content.innerHTML = `
+          <div class="detail">
+            <h2>${escapeHtml(data.name)}</h2>
+            <div class="price">$${Number(data.price).toFixed(2)}</div>
+            <p class="muted">${escapeHtml(data.description || 'No description.')}</p>
+            <dl>
+              <dt>ID</dt><dd>${data.id}</dd>
+              <dt>Category</dt><dd>${escapeHtml(data.category || 'Uncategorized')}</dd>
+              <dt>Availability</dt>
+              <dd class="${data.in_stock ? 'in' : 'out'}">
+                ${data.in_stock ? 'In stock' : 'Out of stock'}
+              </dd>
+            </dl>
+          </div>`;
+      } catch (e) {
+        content.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+      }
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>
