@@ -156,6 +156,51 @@
         every product created via the API, leaving only the built-in baseline catalog. If you
         create products for testing, expect them to be cleared at the next midnight.</p>
 
+      <div class="countdown">
+        <div>
+          <div class="label">Next cleanup in</div>
+          <div class="sub">All products created through the API are deleted at midnight
+            (Israel time). The baseline catalog is kept.</div>
+        </div>
+        <div class="clock">
+          <div class="unit"><div class="num" id="cd-h">00</div><div class="u">hours</div></div>
+          <div class="unit"><div class="num" id="cd-m">00</div><div class="u">minutes</div></div>
+          <div class="unit"><div class="num" id="cd-s">00</div><div class="u">seconds</div></div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const hEl = document.getElementById('cd-h');
+          const mEl = document.getElementById('cd-m');
+          const sEl = document.getElementById('cd-s');
+          const pad = n => String(n).padStart(2, '0');
+
+          function secondsLeft() {
+            // Current time in Israel, regardless of the visitor's own timezone.
+            const parts = new Intl.DateTimeFormat('en-GB', {
+              timeZone: 'Asia/Jerusalem', hourCycle: 'h23',
+              hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(new Date());
+            let h = 0, m = 0, s = 0;
+            for (const p of parts) {
+              if (p.type === 'hour') h = +p.value % 24;
+              if (p.type === 'minute') m = +p.value;
+              if (p.type === 'second') s = +p.value;
+            }
+            return 86400 - (h * 3600 + m * 60 + s);
+          }
+
+          function tick() {
+            let left = secondsLeft();
+            hEl.textContent = pad(Math.floor(left / 3600));
+            mEl.textContent = pad(Math.floor((left % 3600) / 60));
+            sEl.textContent = pad(left % 60);
+          }
+          tick();
+          setInterval(tick, 1000);
+        })();
+      </script>
+
       <h2>Pages on this site</h2>
       <ul>
         <li><code>/</code>: catalog with search; click a product to open its details in a new tab.</li>

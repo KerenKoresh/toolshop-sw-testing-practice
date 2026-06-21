@@ -195,11 +195,12 @@ def list_products():
             return jsonify({"error": "id must be a number"}), 400
         rows = s.scalars(select(Product).where(Product.id == int(exact_id))).all()
     elif search:
+        # Order by id so results follow creation order (newest last), stable across edits.
         rows = s.scalars(
-            select(Product).where(Product.name.ilike(f"%{search}%")).order_by(Product.name)
+            select(Product).where(Product.name.ilike(f"%{search}%")).order_by(Product.id)
         ).all()
     else:
-        rows = s.scalars(select(Product).order_by(Product.name)).all()
+        rows = s.scalars(select(Product).order_by(Product.id)).all()
 
     return jsonify([p.to_dict() for p in rows])
 
